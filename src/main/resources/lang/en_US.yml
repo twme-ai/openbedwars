@@ -11,6 +11,7 @@ error.invalid-locale: '<red>Locale <yellow><locale></yellow> is not installed.</
 error.invalid-team: '<red>That team is not available.</red>'
 error.bed-own: '<red>You cannot destroy your own bed.</red>'
 error.block-protected: '<red>You can only break blocks placed during this game.</red>'
+error.block-place-protected: '<red>You cannot place blocks in this protected area.</red>'
 error.build-height: '<red>You have reached the build height limit.</red>'
 error.shop-game-only: '<red>The shop is only available during a game.</red>'
 error.cannot-start: '<red>The arena needs at least two players and must not already be running.</red>'

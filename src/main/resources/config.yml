@@ -35,3 +35,8 @@ generator-periods:
     tier-1: 65.0
     tier-2: 50.0
     tier-3: 35.0
+
+generator-displays:
+  enabled: true
+  item-height: 1.35
+  text-height: 2.35

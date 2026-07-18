@@ -57,6 +57,29 @@ Stand at the item spawn point and add every diamond and emerald generator:
 
 Iron and gold use each team's `forge` location and do not need separate generator commands.
 
+Diamond and emerald generators show a rotating resource block, tier, and next-drop countdown while a match is running. The display pauses at `--:--` when the nearby resource cap is full. It can be disabled or repositioned globally in `config.yml`:
+
+```yaml
+generator-displays:
+  enabled: true
+  item-height: 1.35
+  text-height: 2.35
+```
+
+## Protected areas
+
+New arenas protect blocks around team spawns, shops, forges, and map generators. The defaults follow the commonly used Bed Wars protection radii and can be changed per arena in `arenas.yml`:
+
+```yaml
+protection:
+  spawn-radius: 5
+  item-shop-radius: 1
+  upgrade-shop-radius: 1
+  generator-radius: 1
+```
+
+Spawn protection extends the configured radius in every direction. Shop protection extends one block below and four blocks above the recorded location; forge and map-generator protection extends two blocks below and five blocks above it. A radius of `0` disables that protection type. These checks apply to player placement, buckets and flowing liquids, and plugin-generated structures.
+
 ## Validate and enable
 
 ```text

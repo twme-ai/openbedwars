@@ -74,13 +74,18 @@ public final class GameListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         arenas.arenaOf(event.getPlayer()).ifPresent(arena -> {
-            if (!arena.handlePlace(event.getPlayer(), event.getBlockPlaced(), event.getBlockReplacedState())) {
+            Arena.PlaceResult result = arena.handlePlace(
+                    event.getPlayer(), event.getBlockPlaced(), event.getBlockReplacedState());
+            if (result != Arena.PlaceResult.ALLOWED) {
                 event.setCancelled(true);
-                if (arena.phase() == GamePhase.RUNNING
-                        && !arena.definition().canBuildAt(event.getBlockPlaced().getY())) {
+                if (result == Arena.PlaceResult.BUILD_LIMIT) {
                     plugin.messages().send(event.getPlayer(), "error.build-height");
+                } else if (arena.phase() == GamePhase.RUNNING) {
+                    plugin.messages().send(event.getPlayer(), "error.block-place-protected");
                 }
-            } else if (event.getBlockPlaced().getType() == Material.TNT) {
+                return;
+            }
+            if (event.getBlockPlaced().getType() == Material.TNT) {
                 arena.removePlacedBlock(event.getBlockPlaced());
                 event.getBlockPlaced().setType(Material.AIR, false);
                 TNTPrimed tnt = event.getBlockPlaced().getWorld().spawn(

@@ -60,6 +60,12 @@ public final class ArenaConfigRepository {
                 section.getInt("players-per-team", 1),
                 section.getInt("void-kill-y", 0),
                 section.getInt("max-build-y", 180),
+                new ArenaProtection(
+                        section.getInt("protection.spawn-radius", 5),
+                        section.getInt("protection.item-shop-radius", 1),
+                        section.getInt("protection.upgrade-shop-radius", 1),
+                        section.getInt("protection.generator-radius", 1)
+                ),
                 position(section, "lobby"),
                 position(section, "spectator"),
                 teams,

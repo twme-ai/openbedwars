@@ -124,6 +124,10 @@ public final class ArenaSetupService {
         yaml.set(root + ".players-per-team", playersPerTeam);
         yaml.set(root + ".void-kill-y", 0);
         yaml.set(root + ".max-build-y", 180);
+        yaml.set(root + ".protection.spawn-radius", 5);
+        yaml.set(root + ".protection.item-shop-radius", 1);
+        yaml.set(root + ".protection.upgrade-shop-radius", 1);
+        yaml.set(root + ".protection.generator-radius", 1);
         save(yaml);
         plugin.messages().send(player, "setup.created", MessageService.text("arena", key));
     }

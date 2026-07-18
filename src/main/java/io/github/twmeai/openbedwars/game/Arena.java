@@ -10,8 +10,11 @@ import io.github.twmeai.openbedwars.statistics.StatsDelta;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import io.papermc.paper.registry.keys.DamageTypeKeys;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
+import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.GameRules;
 import org.bukkit.Location;
@@ -25,13 +28,19 @@ import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Display;
 import org.bukkit.entity.Item;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
+import org.joml.AxisAngle4f;
+import org.joml.Vector3f;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -48,8 +57,6 @@ import java.util.UUID;
 import java.util.function.BiConsumer;
 
 public final class Arena {
-    private static final int RESOURCE_CAP = 48;
-    private static final int RARE_RESOURCE_CAP = 8;
     private static final DamageType VOID_DAMAGE_TYPE = RegistryAccess.registryAccess()
             .getRegistry(RegistryKey.DAMAGE_TYPE)
             .getOrThrow(DamageTypeKeys.OUT_OF_WORLD);
@@ -64,7 +71,8 @@ public final class Arena {
     private final ScoreboardService scoreboards;
     private final Map<UUID, PlayerState> players = new LinkedHashMap<>();
     private final EnumMap<TeamColor, TeamState> teams = new EnumMap<>(TeamColor.class);
-    private final Map<String, Double> generatorProgress = new HashMap<>();
+    private final Map<String, GeneratorClock> generatorClocks = new HashMap<>();
+    private final Map<String, GeneratorDisplay> generatorDisplays = new HashMap<>();
     private final Map<BlockKey, BlockState> changedBlocks = new LinkedHashMap<>();
     private final Set<BlockKey> placedBlocks = new HashSet<>();
     private final List<Entity> spawnedEntities = new ArrayList<>();
@@ -206,7 +214,7 @@ public final class Arena {
     public boolean handleBucketEmpty(Player player, Block affectedBlock) {
         PlayerState state = players.get(player.getUniqueId());
         if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()
-                || !definition.canBuildAt(affectedBlock.getY())) return false;
+                || !definition.canBuildAt(affectedBlock.getY()) || isProtectedBlock(affectedBlock)) return false;
         captureBeforeChange(affectedBlock);
         placedBlocks.add(BlockKey.of(affectedBlock));
         return true;
@@ -220,7 +228,7 @@ public final class Arena {
 
     public boolean handleFluidSpread(Block source, Block destination) {
         if (!placedBlocks.contains(BlockKey.of(source))) return true;
-        if (!definition.canBuildAt(destination.getY())) return false;
+        if (!definition.canBuildAt(destination.getY()) || isProtectedBlock(destination)) return false;
         captureBeforeChange(destination);
         placedBlocks.add(BlockKey.of(destination));
         return true;
@@ -262,7 +270,8 @@ public final class Arena {
     }
 
     public boolean placeGeneratedBlock(Block block, BlockData data) {
-        if (phase != GamePhase.RUNNING || !block.getWorld().equals(world) || !definition.canBuildAt(block.getY())) return false;
+        if (phase != GamePhase.RUNNING || !block.getWorld().equals(world)
+                || !definition.canBuildAt(block.getY()) || isProtectedBlock(block)) return false;
         BlockKey key = BlockKey.of(block);
         if (!block.isEmpty() && !placedBlocks.contains(key)) return false;
         captureBeforeChange(block);
@@ -551,16 +560,17 @@ public final class Arena {
         resetArena();
     }
 
-    public boolean handlePlace(Player player, Block block, BlockState replacedState) {
+    public PlaceResult handlePlace(Player player, Block block, BlockState replacedState) {
         PlayerState state = players.get(player.getUniqueId());
-        if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()
-                || !definition.canBuildAt(block.getY())) {
-            return false;
+        if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()) {
+            return PlaceResult.PROTECTED;
         }
+        if (!definition.canBuildAt(block.getY())) return PlaceResult.BUILD_LIMIT;
+        if (isProtectedBlock(block)) return PlaceResult.PROTECTED;
         BlockKey key = BlockKey.of(block);
         changedBlocks.putIfAbsent(key, replacedState);
         placedBlocks.add(key);
-        return true;
+        return PlaceResult.ALLOWED;
     }
 
     public BreakResult handleBreak(Player player, Block block) {
@@ -711,7 +721,7 @@ public final class Arena {
         }
         elapsedSeconds = 0;
         statsRecorded = false;
-        generatorProgress.clear();
+        generatorClocks.clear();
         trapCooldownUntil.clear();
         for (TeamState team : teams.values()) {
             team.restoreBed();
@@ -729,6 +739,7 @@ public final class Arena {
             player.teleportAsync(team.definition().spawn().toLocation(world));
         }
         spawnShopkeepers();
+        spawnGeneratorDisplays();
         broadcast("arena.started");
     }
 
@@ -769,12 +780,15 @@ public final class Arena {
             }
             double multiplier = 1.0 + (team.forge() * 0.5);
             spawnGenerator("forge:" + team.color() + ":iron", ResourceType.IRON,
-                    team.definition().forge(), settings.generatorPeriods().iron() / multiplier);
+                    team.definition().forge(), settings.generatorPeriods().iron() / multiplier,
+                    ResourceType.IRON.generatorCap(1));
             spawnGenerator("forge:" + team.color() + ":gold", ResourceType.GOLD,
-                    team.definition().forge(), settings.generatorPeriods().gold() / multiplier);
+                    team.definition().forge(), settings.generatorPeriods().gold() / multiplier,
+                    ResourceType.GOLD.generatorCap(1));
             if (team.forge() >= 3) {
                 spawnGenerator("forge:" + team.color() + ":emerald", ResourceType.EMERALD,
-                        team.definition().forge(), team.forge() >= 4 ? 8.0 : 12.0);
+                        team.definition().forge(), team.forge() >= 4 ? 8.0 : 12.0,
+                        ResourceType.EMERALD.generatorCap(1));
             }
         }
     }
@@ -782,34 +796,116 @@ public final class Arena {
     private void spawnMapGenerators(ResourceType type, int tier) {
         List<Position> positions = definition.generators().getOrDefault(type, List.of());
         for (int index = 0; index < positions.size(); index++) {
-            spawnGenerator(type + ":" + index, type, positions.get(index), settings.generatorPeriods().period(type, tier));
+            String key = type + ":" + index;
+            GeneratorStatus status = spawnGenerator(key, type, positions.get(index),
+                    settings.generatorPeriods().period(type, tier), type.generatorCap(tier));
+            updateGeneratorDisplay(key, type, tier, status);
         }
     }
 
-    private void spawnGenerator(String key, ResourceType type, Position position, double period) {
-        double progress = generatorProgress.getOrDefault(key, 0.0) + 1.0;
-        while (progress >= period) {
-            dropResource(type, position.toLocation(world));
-            progress -= period;
+    private GeneratorStatus spawnGenerator(
+            String key,
+            ResourceType type,
+            Position position,
+            double period,
+            int cap
+    ) {
+        Location location = position.toLocation(world);
+        GeneratorClock clock = generatorClocks.computeIfAbsent(key, ignored -> new GeneratorClock());
+        boolean full = isGeneratorFull(type, location, cap);
+        int spawns = clock.advance(period, full);
+        for (int count = 0; count < spawns; count++) {
+            if (!dropResource(type, location, cap)) break;
         }
-        generatorProgress.put(key, progress);
+        boolean nowFull = isGeneratorFull(type, location, cap);
+        return new GeneratorStatus(nowFull, clock.secondsUntilNext(period));
     }
 
-    private void dropResource(ResourceType type, Location location) {
-        int cap = type == ResourceType.DIAMOND || type == ResourceType.EMERALD ? RARE_RESOURCE_CAP : RESOURCE_CAP;
+    private boolean dropResource(ResourceType type, Location location, int cap) {
+        if (isGeneratorFull(type, location, cap)) return false;
+        Item item = world.dropItem(location.clone().add(0, 0.25, 0), new ItemStack(type.material()));
+        item.setVelocity(new Vector());
+        item.setPickupDelay(0);
+        trackEntity(item);
+        return true;
+    }
+
+    private boolean isGeneratorFull(ResourceType type, Location location, int cap) {
         int nearby = world.getNearbyEntities(location, 1.75, 1.5, 1.75).stream()
                 .filter(Item.class::isInstance)
                 .map(Item.class::cast)
                 .filter(item -> item.getItemStack().getType() == type.material())
                 .mapToInt(item -> item.getItemStack().getAmount())
                 .sum();
-        if (nearby >= cap) {
-            return;
+        return nearby >= cap;
+    }
+
+    private void spawnGeneratorDisplays() {
+        if (!settings.generatorDisplays().enabled()) return;
+        for (ResourceType type : List.of(ResourceType.DIAMOND, ResourceType.EMERALD)) {
+            List<Position> positions = definition.generators().getOrDefault(type, List.of());
+            for (int index = 0; index < positions.size(); index++) {
+                String key = type + ":" + index;
+                GeneratorDisplay display = createGeneratorDisplay(type, positions.get(index));
+                generatorDisplays.put(key, display);
+                int remaining = (int) Math.ceil(settings.generatorPeriods().period(type, 1));
+                updateGeneratorDisplay(key, type, 1, new GeneratorStatus(false, remaining));
+            }
         }
-        Item item = world.dropItem(location.clone().add(0, 0.25, 0), new ItemStack(type.material()));
-        item.setVelocity(new Vector());
-        item.setPickupDelay(0);
+    }
+
+    private GeneratorDisplay createGeneratorDisplay(ResourceType type, Position position) {
+        GameSettings.GeneratorDisplaySettings displaySettings = settings.generatorDisplays();
+        Location base = position.toLocation(world);
+        Material blockMaterial = type == ResourceType.DIAMOND ? Material.DIAMOND_BLOCK : Material.EMERALD_BLOCK;
+        ItemDisplay item = world.spawn(base.clone().add(0, displaySettings.itemHeight(), 0), ItemDisplay.class, entity -> {
+            entity.setItemStack(new ItemStack(blockMaterial));
+            entity.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+            entity.setBillboard(Display.Billboard.FIXED);
+            entity.setBrightness(new Display.Brightness(15, 15));
+            entity.setGravity(false);
+            entity.setInvulnerable(true);
+            entity.setPersistent(false);
+            entity.setInterpolationDuration(20);
+            entity.setTransformation(displayTransformation(0));
+        });
+        TextDisplay text = world.spawn(base.clone().add(0, displaySettings.textHeight(), 0), TextDisplay.class, entity -> {
+            entity.setBillboard(Display.Billboard.CENTER);
+            entity.setAlignment(TextDisplay.TextAlignment.CENTER);
+            entity.setBackgroundColor(Color.fromARGB(80, 0, 0, 0));
+            entity.setBrightness(new Display.Brightness(15, 15));
+            entity.setShadowed(true);
+            entity.setSeeThrough(false);
+            entity.setLineWidth(80);
+            entity.setGravity(false);
+            entity.setInvulnerable(true);
+            entity.setPersistent(false);
+        });
         trackEntity(item);
+        trackEntity(text);
+        return new GeneratorDisplay(item, text);
+    }
+
+    private void updateGeneratorDisplay(String key, ResourceType type, int tier, GeneratorStatus status) {
+        GeneratorDisplay display = generatorDisplays.get(key);
+        if (display == null || !display.item().isValid() || !display.text().isValid()) return;
+        display.item().setInterpolationDelay(0);
+        display.item().setTransformation(displayTransformation((float) (elapsedSeconds * Math.PI / 10.0)));
+        Component countdown = status.full()
+                ? Component.text("--:--", NamedTextColor.RED)
+                : Component.text(GeneratorDisplayFormat.countdown(status.remainingSeconds()), type.textColor());
+        display.text().text(Component.text(GeneratorDisplayFormat.romanTier(tier), NamedTextColor.YELLOW)
+                .append(Component.newline())
+                .append(countdown));
+    }
+
+    private Transformation displayTransformation(float angle) {
+        return new Transformation(
+                new Vector3f(),
+                new AxisAngle4f(angle, 0, 1, 0),
+                new Vector3f(0.6f, 0.6f, 0.6f),
+                new AxisAngle4f()
+        );
     }
 
     private void tickHealPools() {
@@ -1063,7 +1159,8 @@ public final class Arena {
         }
         players.clear();
         teams.values().forEach(TeamState::reset);
-        generatorProgress.clear();
+        generatorClocks.clear();
+        generatorDisplays.clear();
         trapCooldownUntil.clear();
         lastHits.clear();
         trapImmuneUntil.clear();
@@ -1077,6 +1174,10 @@ public final class Arena {
 
     private void captureBeforeChange(Block block) {
         changedBlocks.putIfAbsent(BlockKey.of(block), block.getState());
+    }
+
+    private boolean isProtectedBlock(Block block) {
+        return definition.isProtectedBlock(block.getX(), block.getY(), block.getZ());
     }
 
     private void prepareWaitingPlayer(Player player) {
@@ -1131,6 +1232,12 @@ public final class Arena {
         BED_DESTROYED
     }
 
+    public enum PlaceResult {
+        ALLOWED,
+        PROTECTED,
+        BUILD_LIMIT
+    }
+
     public enum TeamChangeResult {
         SUCCESS,
         FULL,
@@ -1139,5 +1246,11 @@ public final class Arena {
     }
 
     private record CombatHit(UUID attacker, long timestamp) {
+    }
+
+    private record GeneratorStatus(boolean full, int remainingSeconds) {
+    }
+
+    private record GeneratorDisplay(ItemDisplay item, TextDisplay text) {
     }
 }

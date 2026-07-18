@@ -38,8 +38,8 @@ Implemented in the current development build:
 - Isolated arenas with waiting, countdown, running, sudden-death, ending, and reset phases
 - Automatic team balancing, beds, respawning, final kills, victory detection, and combat attribution
 - Per-match Ender Chest isolation, final-death forge drops, and killer resource rewards
-- Per-arena instant void-death and exclusive build-height limits shared by normal and generated blocks
-- Iron, gold, diamond, and emerald generators with timed tiers and forge upgrades
+- Per-arena instant void-death, exclusive build-height limits, and configurable spawn, shop, forge, and generator protection zones
+- Capped iron, gold, diamond, and emerald generators with timed tiers, forge upgrades, and rotating map-generator displays
 - Hypixel-style Quick Buy and item shop categories, permanent armor and shears, tiered tools, potions, and utilities
 - Team upgrades, an ordered three-trap queue, heal pool, and Dragon Buff
 - Working Fireballs, Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers

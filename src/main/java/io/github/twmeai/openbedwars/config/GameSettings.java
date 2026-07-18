@@ -16,7 +16,8 @@ public record GameSettings(
         int experiencePerMinute,
         int winBonusExperience,
         EventSchedule eventSchedule,
-        GeneratorPeriods generatorPeriods
+        GeneratorPeriods generatorPeriods,
+        GeneratorDisplaySettings generatorDisplays
 ) {
     public GameSettings {
         if (minimumPlayers < 2 || countdownSeconds < 1 || respawnSeconds < 0 || endingSeconds < 1
@@ -49,6 +50,11 @@ public record GameSettings(
                         config.getDouble("generator-periods.gold", 4.0),
                         tiered(config, ResourceType.DIAMOND, 30.0, 23.0, 12.0),
                         tiered(config, ResourceType.EMERALD, 65.0, 50.0, 35.0)
+                ),
+                new GeneratorDisplaySettings(
+                        config.getBoolean("generator-displays.enabled", true),
+                        config.getDouble("generator-displays.item-height", 1.35),
+                        config.getDouble("generator-displays.text-height", 2.35)
                 )
         );
     }
@@ -94,6 +100,15 @@ public record GameSettings(
 
         public double atTier(int tier) {
             return tier <= 1 ? tierOne : tier == 2 ? tierTwo : tierThree;
+        }
+    }
+
+    public record GeneratorDisplaySettings(boolean enabled, double itemHeight, double textHeight) {
+        public GeneratorDisplaySettings {
+            if (!Double.isFinite(itemHeight) || !Double.isFinite(textHeight)
+                    || itemHeight < 0 || itemHeight > 10 || textHeight < 0 || textHeight > 10) {
+                throw new IllegalArgumentException("Generator display heights must be between 0 and 10");
+            }
         }
     }
 }

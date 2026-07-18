@@ -31,4 +31,13 @@ class PlayerProgressionTest {
         assertEquals(ResourceType.EMERALD, ResourceType.fromMaterial(Material.EMERALD).orElseThrow());
         assertEquals(java.util.Optional.empty(), ResourceType.fromMaterial(Material.WHITE_WOOL));
     }
+
+    @Test
+    void generatorCapsMatchClassicTierLimits() {
+        assertEquals(48, ResourceType.IRON.generatorCap(1));
+        assertEquals(8, ResourceType.GOLD.generatorCap(1));
+        assertEquals(4, ResourceType.DIAMOND.generatorCap(1));
+        assertEquals(6, ResourceType.DIAMOND.generatorCap(2));
+        assertEquals(8, ResourceType.EMERALD.generatorCap(3));
+    }
 }

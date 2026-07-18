@@ -16,6 +16,7 @@ public record ArenaDefinition(
         int playersPerTeam,
         int voidKillY,
         int maxBuildY,
+        ArenaProtection protection,
         Position lobby,
         Position spectator,
         Map<TeamColor, TeamDefinition> teams,
@@ -25,6 +26,7 @@ public record ArenaDefinition(
         Objects.requireNonNull(key, "key");
         Objects.requireNonNull(displayName, "displayName");
         Objects.requireNonNull(worldName, "worldName");
+        Objects.requireNonNull(protection, "protection");
         Objects.requireNonNull(lobby, "lobby");
         Objects.requireNonNull(spectator, "spectator");
         teams = Map.copyOf(teams);
@@ -50,5 +52,19 @@ public record ArenaDefinition(
 
     public boolean canBuildAt(int y) {
         return y < maxBuildY;
+    }
+
+    public boolean isProtectedBlock(int x, int y, int z) {
+        for (TeamDefinition team : teams.values()) {
+            if (protection.protectsSpawn(team.spawn(), x, y, z)
+                    || protection.protectsItemShop(team.itemShop(), x, y, z)
+                    || protection.protectsUpgradeShop(team.upgradeShop(), x, y, z)
+                    || protection.protectsGenerator(team.forge(), x, y, z)) {
+                return true;
+            }
+        }
+        return generators.values().stream()
+                .flatMap(List::stream)
+                .anyMatch(generator -> protection.protectsGenerator(generator, x, y, z));
     }
 }

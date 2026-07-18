@@ -36,6 +36,14 @@ public enum ResourceType {
         };
     }
 
+    public int generatorCap(int tier) {
+        return switch (this) {
+            case IRON -> 48;
+            case GOLD -> 8;
+            case DIAMOND, EMERALD -> tier <= 1 ? 4 : tier == 2 ? 6 : 8;
+        };
+    }
+
     public static Optional<ResourceType> fromMaterial(Material material) {
         for (ResourceType type : values()) {
             if (type.material == material) return Optional.of(type);
