@@ -110,6 +110,12 @@ The item-shop invisibility potion keeps the player's real armor equipped while h
 
 Invisibility and its armor override end when the player receives uncancelled damage, lands a hit on an enemy, triggers an Alarm Trap, or the potion expires. Armor is also resynchronized after reconnect, respawn, permanent-armor purchases, and team protection upgrades.
 
+## Spectating
+
+After final elimination, a player enters a flying Adventure observer mode at the arena's spectator position. Active players cannot see or collide with observers, while observers retain visibility of every active player. Observer damage, block and entity interaction, item pickup and drop, and inventory movement are cancelled.
+
+The compass in hotbar slot 1 opens a localized player-head menu containing only online, living players who are neither eliminated nor respawning. Each entry shows current health and food; selecting it teleports the observer to that player and revalidates the target before moving. The red bed in hotbar slot 9 leaves the arena and restores the player's pre-game location, inventory, game mode, flight, collision, effects, and scoreboard. Both items are also restored when an eliminated player reconnects during the game.
+
 ## Validate and enable
 
 ```text

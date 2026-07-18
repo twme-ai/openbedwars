@@ -46,6 +46,7 @@ Implemented in the current development build:
 - Per-player MiniMessage locales, English and Traditional Chinese translations, and localized scoreboards
 - Asynchronous SQLite statistics for games, wins/losses, kills, final kills/deaths, beds, XP, and Bed Wars levels
 - Automatic same-game reconnect with a configurable grace period and delayed snapshot restoration
+- Final-elimination spectator flight with an active-player teleporter, enemy-hidden observers, and a return-to-lobby item
 - Hypixel-style parties with expiring invites, leadership, moderation, chat, and atomic arena joining
 - Asynchronous top-10 leaderboards for wins, kills, final kills, beds, and level
 - Game block, liquid, container, entity, and inventory cleanup without replacing the arena world

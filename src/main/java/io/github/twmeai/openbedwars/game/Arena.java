@@ -181,7 +181,7 @@ public final class Arena {
     public boolean areEnemies(Player first, Player second) {
         PlayerState firstState = players.get(first.getUniqueId());
         PlayerState secondState = players.get(second.getUniqueId());
-        return firstState != null && secondState != null && firstState.team() != secondState.team();
+        return isActive(firstState) && isActive(secondState) && firstState.team() != secondState.team();
     }
 
     public boolean isEnemy(TeamColor team, Player player) {
@@ -517,6 +517,7 @@ public final class Arena {
         if (phase == GamePhase.RUNNING) {
             recordStatistics(Map.of(state, false));
         }
+        plugin.spectatorService().release(player);
         revealInvisibility(player);
         players.remove(player.getUniqueId());
         TeamState team = teams.get(state.team());
@@ -572,21 +573,22 @@ public final class Arena {
             prepareWaitingPlayer(player);
         } else if (phase == GamePhase.RUNNING) {
             if (state.eliminated()) {
-                player.getInventory().clear();
-                player.setGameMode(GameMode.SPECTATOR);
+                plugin.spectatorService().prepare(player, this);
                 player.teleportAsync(definition.spectator().toLocation(world));
             } else if (state.respawning()) {
                 state.respawning(false);
                 kits.prepareForGame(player, state, team);
                 player.teleportAsync(team.definition().spawn().toLocation(world));
+                plugin.spectatorService().syncActiveViewer(player, this);
             } else {
                 player.setGameMode(GameMode.SURVIVAL);
                 player.setAllowFlight(false);
                 kits.givePersistentEquipment(player, state, team);
+                plugin.spectatorService().syncActiveViewer(player, this);
             }
             scoreboards.update(this);
         } else {
-            player.setGameMode(GameMode.SPECTATOR);
+            plugin.spectatorService().prepare(player, this);
             player.teleportAsync(definition.spectator().toLocation(world));
         }
         if (phase == GamePhase.RUNNING) {
@@ -741,13 +743,13 @@ public final class Arena {
             return;
         }
         if (state.eliminated()) {
-            player.getInventory().clear();
-            player.setGameMode(GameMode.SPECTATOR);
+            plugin.spectatorService().prepare(player, this);
+            syncInvisibilityFor(player);
             player.teleportAsync(definition.spectator().toLocation(world));
             return;
         }
         if (phase != GamePhase.RUNNING) {
-            player.setGameMode(GameMode.SPECTATOR);
+            plugin.spectatorService().prepare(player, this);
             return;
         }
         beginRespawnCountdown(player, state);
@@ -1152,6 +1154,7 @@ public final class Arena {
         state.eliminated(true);
         respawnProtection.remove(state.playerId());
         invisiblePlayers.remove(state.playerId());
+        plugin.spectatorService().release(state.playerId());
         playerRelease.accept(state.playerId(), state.snapshot());
         broadcast("arena.reconnect-expired",
                 MessageService.text("player", state.playerName()),
@@ -1259,8 +1262,11 @@ public final class Arena {
             Player player = Bukkit.getPlayer(state.playerId());
             playerRelease.accept(state.playerId(), state.snapshot());
             if (player != null) {
+                plugin.spectatorService().release(player);
                 scoreboards.remove(player);
                 state.snapshot().restore(player);
+            } else {
+                plugin.spectatorService().release(state.playerId());
             }
         }
         players.clear();
@@ -1348,6 +1354,10 @@ public final class Arena {
             Player player = Bukkit.getPlayer(playerId);
             if (player != null) action.accept(player);
         }
+    }
+
+    private boolean isActive(PlayerState state) {
+        return state != null && !state.eliminated() && !state.respawning() && !state.disconnected();
     }
 
     private void prepareWaitingPlayer(Player player) {

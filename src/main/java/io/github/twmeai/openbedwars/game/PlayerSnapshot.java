@@ -24,6 +24,7 @@ public final class PlayerSnapshot {
     private final double health;
     private final boolean allowFlight;
     private final boolean flying;
+    private final boolean collidable;
     private final Collection<PotionEffect> effects;
     private final Scoreboard scoreboard;
 
@@ -41,6 +42,7 @@ public final class PlayerSnapshot {
         health = player.getHealth();
         allowFlight = player.getAllowFlight();
         flying = player.isFlying();
+        collidable = player.isCollidable();
         effects = ListCopy.effects(player.getActivePotionEffects());
         scoreboard = player.getScoreboard();
     }
@@ -69,6 +71,7 @@ public final class PlayerSnapshot {
         if (allowFlight) {
             player.setFlying(flying);
         }
+        player.setCollidable(collidable);
         double maxHealth = player.getAttribute(Attribute.MAX_HEALTH).getValue();
         player.setHealth(Math.max(0.1, Math.min(health, maxHealth)));
         player.teleportAsync(location);

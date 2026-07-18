@@ -11,6 +11,7 @@ import io.github.twmeai.openbedwars.shop.UpgradeService;
 import io.github.twmeai.openbedwars.special.SpecialItemService;
 import io.github.twmeai.openbedwars.statistics.StatisticsService;
 import io.github.twmeai.openbedwars.party.PartyService;
+import io.github.twmeai.openbedwars.spectator.SpectatorService;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -25,6 +26,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
     private StatisticsService statisticsService;
     private ArenaSetupService arenaSetupService;
     private PartyService partyService;
+    private SpectatorService spectatorService;
 
     @Override
     public void onEnable() {
@@ -33,6 +35,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         messages = new MessageService(this);
         statisticsService = new StatisticsService(this);
         arenaManager = new ArenaManager(this);
+        spectatorService = new SpectatorService(this, arenaManager);
         arenaSetupService = new ArenaSetupService(this, arenaManager);
         partyService = new PartyService(this, arenaManager);
         shopService = new ShopService(this, arenaManager);
@@ -48,6 +51,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(shopService, this);
         getServer().getPluginManager().registerEvents(upgradeService, this);
         getServer().getPluginManager().registerEvents(specialItemService, this);
+        getServer().getPluginManager().registerEvents(spectatorService, this);
     }
 
     @Override
@@ -92,6 +96,10 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
 
     public PartyService partyService() {
         return partyService;
+    }
+
+    public SpectatorService spectatorService() {
+        return spectatorService;
     }
 
     private void saveResourceIfMissing(String path) {
