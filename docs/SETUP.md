@@ -192,6 +192,8 @@ Enable runs the production arena loader. If any required location is missing or 
 
 Each loaded world can belong to exactly one enabled arena. Definitions are evaluated in `arenas.yml` order; the first arena claims the world's UUID, while any later arena using that same loaded world is skipped. The console error identifies both arena keys and `/bw list` contains only the owner, preventing ambiguous world-event routing.
 
+If another plugin or command moves an arena player into a different world, OpenBedWars treats that transition as an explicit leave. The player is removed from the team and arena indexes, their pre-game snapshot is restored, and an active match immediately re-evaluates team elimination and victory instead of reserving a stale slot. Cross-world lobby transfers should therefore expect the same loss semantics as `/bw leave`, not the reconnect grace used for a network disconnect.
+
 Use `/bw list` to verify the arena, then join with `/bw join <arena>`. Disable or remove an arena with:
 
 ```text

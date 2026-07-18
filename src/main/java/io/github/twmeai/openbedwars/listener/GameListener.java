@@ -27,6 +27,7 @@ import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.player.PlayerChangedWorldEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
@@ -359,6 +360,15 @@ public final class GameListener implements Listener {
     public void onTeleport(PlayerTeleportEvent event) {
         if (event.getTo() == null) return;
         arenas.arenaOf(event.getPlayer()).ifPresent(arena -> arena.handleMovement(event.getPlayer(), event.getTo()));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onWorldChange(PlayerChangedWorldEvent event) {
+        Player player = event.getPlayer();
+        Arena arena = arenas.arenaOf(player).orElse(null);
+        if (arena != null && !player.getWorld().equals(arena.world())) {
+            arenas.leave(player, false);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

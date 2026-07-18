@@ -35,7 +35,7 @@ All messages use MiniMessage and live in `plugins/OpenBedWars/lang/`. English (`
 
 Implemented in the current development build:
 
-- Isolated arenas with waiting, countdown, running, sudden-death, ending, and reset phases
+- Isolated arenas with waiting, countdown, running, sudden-death, ending, reset, and automatic cross-world release
 - Automatic team balancing, beds, respawning with attack-cancelled protection, final kills, one-time team eliminations, victory detection, and combat attribution
 - Per-match Ender Chest isolation, final-death forge drops, and killer resource rewards
 - Per-arena instant void-death, exclusive build-height limits, and configurable spawn, shop, forge, and generator protection zones
