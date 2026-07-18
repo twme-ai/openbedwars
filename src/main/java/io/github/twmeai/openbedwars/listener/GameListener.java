@@ -51,21 +51,6 @@ import java.util.EnumSet;
 import java.util.Set;
 
 public final class GameListener implements Listener {
-    private static final Set<Material> PERSISTENT_ITEMS = EnumSet.of(
-            Material.WOODEN_SWORD,
-            Material.STONE_SWORD,
-            Material.IRON_SWORD,
-            Material.DIAMOND_SWORD,
-            Material.WOODEN_PICKAXE,
-            Material.IRON_PICKAXE,
-            Material.GOLDEN_PICKAXE,
-            Material.DIAMOND_PICKAXE,
-            Material.WOODEN_AXE,
-            Material.STONE_AXE,
-            Material.IRON_AXE,
-            Material.DIAMOND_AXE,
-            Material.SHEARS
-    );
     private static final Set<Material> RESOURCES = EnumSet.of(
             Material.IRON_INGOT,
             Material.GOLD_INGOT,
@@ -278,7 +263,7 @@ public final class GameListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDrop(PlayerDropItemEvent event) {
         if (arenas.arenaOf(event.getPlayer()).isPresent()
-                && PERSISTENT_ITEMS.contains(event.getItemDrop().getItemStack().getType())) {
+                && PersistentItemTransferPolicy.isPersistent(event.getItemDrop().getItemStack().getType())) {
             event.setCancelled(true);
         } else {
             arenas.arenaOf(event.getPlayer()).ifPresent(arena -> arena.trackEntity(event.getItemDrop()));
@@ -292,10 +277,22 @@ public final class GameListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        ItemStack moving = event.isShiftClick() ? event.getCurrentItem() : event.getCursor();
-        if (moving == null || !PERSISTENT_ITEMS.contains(moving.getType())) return;
-        boolean clickedOutsidePlayerInventory = event.getClickedInventory() != event.getView().getBottomInventory();
-        if (clickedOutsidePlayerInventory || event.isShiftClick()) event.setCancelled(true);
+        int hotbarButton = event.getHotbarButton();
+        ItemStack hotbar = hotbarButton >= 0 ? player.getInventory().getItem(hotbarButton) : null;
+        boolean clickedTop = event.getClickedInventory() == event.getView().getTopInventory();
+        InventoryType topType = event.getView().getTopInventory().getType();
+        boolean externalTop = topType != InventoryType.CRAFTING && topType != InventoryType.CREATIVE;
+        if (PersistentItemTransferPolicy.shouldCancelClick(
+                event.getAction(),
+                event.getClick(),
+                clickedTop,
+                externalTop,
+                material(event.getCurrentItem()),
+                material(event.getCursor()),
+                material(hotbar),
+                player.getInventory().getItemInOffHand().getType())) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -303,6 +300,13 @@ public final class GameListener implements Listener {
         if (!(event.getWhoClicked() instanceof Player player) || arenas.arenaOf(player).isEmpty()) return;
         if (event.getRawSlots().stream()
                 .anyMatch(slot -> event.getView().getSlotType(slot) == InventoryType.SlotType.ARMOR)) {
+            event.setCancelled(true);
+            return;
+        }
+        int topSize = event.getView().getTopInventory().getSize();
+        boolean touchesTop = event.getRawSlots().stream().anyMatch(slot -> slot < topSize);
+        if (PersistentItemTransferPolicy.shouldCancelDrag(
+                material(event.getOldCursor()), touchesTop)) {
             event.setCancelled(true);
         }
     }
@@ -422,5 +426,9 @@ public final class GameListener implements Listener {
         if (damager instanceof Projectile projectile && projectile.getShooter() instanceof Player player) return player;
         if (damager instanceof TNTPrimed tnt && tnt.getSource() instanceof Player player) return player;
         return null;
+    }
+
+    private Material material(ItemStack item) {
+        return item == null || item.isEmpty() ? null : item.getType();
     }
 }

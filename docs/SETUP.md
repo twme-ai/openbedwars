@@ -109,6 +109,8 @@ Purchases are capacity-checked against the inventory state after payment and any
 
 Buying a stone, iron, or diamond sword replaces the default wooden sword instead of occupying a second slot. Purchased swords are lost on death; the wooden fallback returns with the respawn kit.
 
+Swords, shears, pickaxes, and axes cannot be moved out of the player inventory during a match. OpenBedWars blocks shift transfers, cursor placement, number-key and offhand swaps, drags into a top inventory, and bundle insertion; cursor and slot drop actions remain blocked as well. Players can still rearrange this equipment inside their own inventory and retrieve a matching item that already existed in a container.
+
 ## Protected areas
 
 New arenas protect blocks around team spawns, shops, forges, and map generators. The defaults follow the commonly used Bed Wars protection radii and can be changed per arena in `arenas.yml`:
