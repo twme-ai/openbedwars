@@ -146,6 +146,8 @@ Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired p
 
 An enemy crossing into the seven-block radius around a team spawn consumes the first trap in that team's ordered queue. Remaining inside the radius does not consume another trap: the enemy must leave and enter again. Queued traps become inactive when the team's bed is destroyed.
 
+Counter-Offensive Trap grants Speed I and Jump Boost II for 15 seconds only to active defending players inside that same seven-block base radius. Teammates fighting elsewhere and eliminated, respawning, or disconnected members do not receive the effects.
+
 Magic Milk suppresses enemy-base entries for 30 seconds. A protected player can cross or move within a base without consuming a trap; if the effect expires while the player is still inside, their next movement can trigger the first queued trap.
 
 ## Sudden Death

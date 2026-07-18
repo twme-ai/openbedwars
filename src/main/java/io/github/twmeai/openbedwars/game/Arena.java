@@ -463,14 +463,24 @@ public final class Arena {
                         org.bukkit.potion.PotionEffectType.SLOWNESS, 8 * 20, 0));
             }
             case COUNTER_OFFENSIVE -> {
+                Location base = defenders.definition().spawn().toLocation(world);
                 for (UUID memberId : defenders.members()) {
                     Player member = Bukkit.getPlayer(memberId);
-                    if (member != null) {
-                        member.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.SPEED, 15 * 20, 1));
-                        member.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                org.bukkit.potion.PotionEffectType.JUMP_BOOST, 15 * 20, 1));
+                    PlayerState memberState = players.get(memberId);
+                    if (member == null
+                            || !member.getWorld().equals(world)
+                            || !CounterOffensiveTrapPolicy.appliesToAlly(
+                                    isActive(memberState), member.getLocation().distanceSquared(base))) {
+                        continue;
                     }
+                    member.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                            org.bukkit.potion.PotionEffectType.SPEED,
+                            CounterOffensiveTrapPolicy.DURATION_TICKS,
+                            CounterOffensiveTrapPolicy.SPEED_AMPLIFIER));
+                    member.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                            org.bukkit.potion.PotionEffectType.JUMP_BOOST,
+                            CounterOffensiveTrapPolicy.DURATION_TICKS,
+                            CounterOffensiveTrapPolicy.JUMP_BOOST_AMPLIFIER));
                 }
             }
             case ALARM -> intruder.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
