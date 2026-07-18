@@ -29,4 +29,5 @@ public enum UpgradeType {
     public Material icon() { return icon; }
     public TrapType trap() { return trap; }
     public boolean isTrap() { return trap != null; }
+    public String translationKey() { return "upgrade.name." + name().toLowerCase(java.util.Locale.ROOT); }
 }

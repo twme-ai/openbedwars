@@ -58,12 +58,14 @@ public final class ShopService implements Listener {
     private final ArenaManager arenas;
     private final MessageService messages;
     private final NamespacedKey shopTypeKey;
+    private final NamespacedKey utilityTypeKey;
 
     public ShopService(OpenBedWarsPlugin plugin, ArenaManager arenas) {
         this.plugin = plugin;
         this.arenas = arenas;
         this.messages = plugin.messages();
         this.shopTypeKey = new NamespacedKey(plugin, "shop_type");
+        this.utilityTypeKey = new NamespacedKey(plugin, "utility_type");
     }
 
     public boolean openItemShop(Player player) {
@@ -93,8 +95,8 @@ public final class ShopService implements Listener {
         }
         for (int index = 0; index < ShopCategory.values().length; index++) {
             ShopCategory category = ShopCategory.values()[index];
-            ItemStack icon = named(category.icon(), Component.text(category.displayName(),
-                    category == holder.category() ? NamedTextColor.GREEN : NamedTextColor.GRAY));
+            ItemStack icon = named(category.icon(), messages.render(player, category.translationKey())
+                    .color(category == holder.category() ? NamedTextColor.GREEN : NamedTextColor.GRAY));
             if (category == holder.category()) {
                 ItemMeta meta = icon.getItemMeta();
                 meta.addEnchant(Enchantment.UNBREAKING, 1, true);
@@ -128,7 +130,8 @@ public final class ShopService implements Listener {
         if (item.action() == ShopItem.Action.TEAM_GLASS) material = team.color().glass();
         ItemStack icon = new ItemStack(material, Math.min(item.amount(), material.getMaxStackSize()));
         ItemMeta meta = icon.getItemMeta();
-        meta.displayName(Component.text(item.displayName(), offer.maxed() ? NamedTextColor.GREEN : NamedTextColor.WHITE)
+        meta.displayName(messages.render(player, item.translationKey())
+                .color(offer.maxed() ? NamedTextColor.GREEN : NamedTextColor.WHITE)
                 .decoration(TextDecoration.ITALIC, false));
         List<Component> lore = new ArrayList<>();
         lore.add(messages.render(player, "shop.cost",
@@ -192,7 +195,8 @@ public final class ShopService implements Listener {
         }
         InventoryCurrency.take(player.getInventory(), offer.currency(), offer.cost());
         grant(player, arena, state, team, item, offer);
-        messages.send(player, "shop.purchased", MessageService.text("item", item.displayName()));
+        messages.send(player, "shop.purchased",
+                MessageService.component("item", messages.render(player, item.translationKey())));
         return true;
     }
 
@@ -245,6 +249,11 @@ public final class ShopService implements Listener {
             case SPEED_POTION -> configurePotion(stack, PotionEffectType.SPEED, 45 * 20, 1, Color.AQUA);
             case JUMP_POTION -> configurePotion(stack, PotionEffectType.JUMP_BOOST, 45 * 20, 4, Color.LIME);
             case INVISIBILITY_POTION -> configurePotion(stack, PotionEffectType.INVISIBILITY, 30 * 20, 0, Color.SILVER);
+            case BED_BUG -> tagUtility(stack, "bed_bug");
+            case DREAM_DEFENDER -> tagUtility(stack, "dream_defender");
+            case BRIDGE_EGG -> tagUtility(stack, "bridge_egg");
+            case MAGIC_MILK -> tagUtility(stack, "magic_milk");
+            case POPUP_TOWER -> tagUtility(stack, "popup_tower");
             default -> {
             }
         }
@@ -323,6 +332,12 @@ public final class ShopService implements Listener {
         ItemMeta meta = stack.getItemMeta();
         meta.setUnbreakable(true);
         meta.addItemFlags(ItemFlag.HIDE_UNBREAKABLE);
+        stack.setItemMeta(meta);
+    }
+
+    private void tagUtility(ItemStack stack, String type) {
+        ItemMeta meta = stack.getItemMeta();
+        meta.getPersistentDataContainer().set(utilityTypeKey, PersistentDataType.STRING, type);
         stack.setItemMeta(meta);
     }
 

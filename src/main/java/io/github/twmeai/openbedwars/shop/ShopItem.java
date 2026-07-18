@@ -36,14 +36,16 @@ public enum ShopItem {
     INVISIBILITY_POTION(ShopCategory.POTIONS, "Invisibility Potion (30 seconds)", Material.POTION, 1, 2, ResourceType.EMERALD, Action.INVISIBILITY_POTION),
 
     GOLDEN_APPLE(ShopCategory.UTILITY, "Golden Apple", Material.GOLDEN_APPLE, 1, 3, ResourceType.GOLD, Action.NORMAL),
+    BED_BUG(ShopCategory.UTILITY, "Bed Bug", Material.SNOWBALL, 1, 30, ResourceType.IRON, Action.BED_BUG),
+    DREAM_DEFENDER(ShopCategory.UTILITY, "Dream Defender", Material.IRON_GOLEM_SPAWN_EGG, 1, 120, ResourceType.IRON, Action.DREAM_DEFENDER),
     FIREBALL(ShopCategory.UTILITY, "Fireball", Material.FIRE_CHARGE, 1, 40, ResourceType.IRON, Action.NORMAL),
     TNT(ShopCategory.UTILITY, "TNT", Material.TNT, 1, 4, ResourceType.GOLD, Action.NORMAL),
     ENDER_PEARL(ShopCategory.UTILITY, "Ender Pearl", Material.ENDER_PEARL, 1, 4, ResourceType.EMERALD, Action.NORMAL),
     WATER_BUCKET(ShopCategory.UTILITY, "Water Bucket", Material.WATER_BUCKET, 1, 3, ResourceType.EMERALD, Action.NORMAL),
-    BRIDGE_EGG(ShopCategory.UTILITY, "Bridge Egg", Material.EGG, 1, 1, ResourceType.EMERALD, Action.NORMAL),
-    MAGIC_MILK(ShopCategory.UTILITY, "Magic Milk", Material.MILK_BUCKET, 1, 4, ResourceType.GOLD, Action.NORMAL),
+    BRIDGE_EGG(ShopCategory.UTILITY, "Bridge Egg", Material.EGG, 1, 1, ResourceType.EMERALD, Action.BRIDGE_EGG),
+    MAGIC_MILK(ShopCategory.UTILITY, "Magic Milk", Material.MILK_BUCKET, 1, 4, ResourceType.GOLD, Action.MAGIC_MILK),
     SPONGE(ShopCategory.UTILITY, "Sponge", Material.SPONGE, 4, 3, ResourceType.GOLD, Action.NORMAL),
-    POPUP_TOWER(ShopCategory.UTILITY, "Compact Pop-up Tower", Material.CHEST, 1, 24, ResourceType.IRON, Action.NORMAL);
+    POPUP_TOWER(ShopCategory.UTILITY, "Compact Pop-up Tower", Material.CHEST, 1, 24, ResourceType.IRON, Action.POPUP_TOWER);
 
     private final ShopCategory category;
     private final String displayName;
@@ -86,6 +88,7 @@ public enum ShopItem {
     public ResourceType currency() { return currency; }
     public Action action() { return action; }
     public ArmorTier armorTier() { return armorTier; }
+    public String translationKey() { return "shop.item." + name().toLowerCase(java.util.Locale.ROOT); }
 
     public enum Action {
         NORMAL,
@@ -102,6 +105,11 @@ public enum ShopItem {
         PUNCH_BOW,
         SPEED_POTION,
         JUMP_POTION,
-        INVISIBILITY_POTION
+        INVISIBILITY_POTION,
+        BED_BUG,
+        DREAM_DEFENDER,
+        BRIDGE_EGG,
+        MAGIC_MILK,
+        POPUP_TOWER
     }
 }

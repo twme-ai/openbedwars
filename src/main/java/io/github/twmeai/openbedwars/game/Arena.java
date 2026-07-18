@@ -14,6 +14,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
@@ -59,6 +60,7 @@ public final class Arena {
     private final Set<BukkitTask> respawnTasks = new HashSet<>();
     private final Map<String, Long> trapCooldownUntil = new HashMap<>();
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
+    private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
 
     private GamePhase phase = GamePhase.WAITING;
     private int countdown;
@@ -136,6 +138,15 @@ public final class Arena {
         return firstState != null && secondState != null && firstState.team() != secondState.team();
     }
 
+    public boolean isEnemy(TeamColor team, Player player) {
+        PlayerState state = players.get(player.getUniqueId());
+        return state != null && !state.eliminated() && !state.respawning() && state.team() != team;
+    }
+
+    public void grantTrapImmunity(Player player, Duration duration) {
+        trapImmuneUntil.put(player.getUniqueId(), System.currentTimeMillis() + duration.toMillis());
+    }
+
     public void recordHit(Player victim, Player attacker) {
         if (areEnemies(victim, attacker)) {
             lastHits.put(victim.getUniqueId(), new CombatHit(attacker.getUniqueId(), System.currentTimeMillis()));
@@ -193,12 +204,43 @@ public final class Arena {
         }
     }
 
+    public boolean placeGeneratedBlock(Block block, Material material) {
+        return placeGeneratedBlock(block, material.createBlockData());
+    }
+
+    public boolean placeGeneratedBlock(Block block, BlockData data) {
+        if (phase != GamePhase.RUNNING || !block.getWorld().equals(world)) return false;
+        BlockKey key = BlockKey.of(block);
+        if (!block.isEmpty() && !placedBlocks.contains(key)) return false;
+        captureBeforeChange(block);
+        placedBlocks.add(key);
+        block.setBlockData(data, false);
+        return true;
+    }
+
+    public void drainWaterAround(Block center, int radius) {
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = -radius; y <= radius; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    Block block = center.getRelative(x, y, z);
+                    if (block.getType() != Material.WATER) continue;
+                    captureBeforeChange(block);
+                    placedBlocks.remove(BlockKey.of(block));
+                    block.setType(Material.AIR, false);
+                }
+            }
+        }
+    }
+
     public void handleMovement(Player intruder) {
         if (phase != GamePhase.RUNNING) {
             return;
         }
         PlayerState intruderState = players.get(intruder.getUniqueId());
         if (intruderState == null || intruderState.eliminated() || intruderState.respawning()) {
+            return;
+        }
+        if (trapImmuneUntil.getOrDefault(intruder.getUniqueId(), 0L) > System.currentTimeMillis()) {
             return;
         }
         for (TeamState defenders : teams.values()) {
@@ -220,7 +262,7 @@ public final class Arena {
                 Player member = Bukkit.getPlayer(memberId);
                 if (member != null) {
                     messages.send(member, "upgrade.triggered",
-                            MessageService.text("trap", trapDisplayName(trap)));
+                            MessageService.component("trap", messages.render(member, trapTranslationKey(trap))));
                 }
             }
         }
@@ -251,12 +293,12 @@ public final class Arena {
         }
     }
 
-    private String trapDisplayName(TrapType trap) {
+    private String trapTranslationKey(TrapType trap) {
         return switch (trap) {
-            case ITS_A_TRAP -> "It's a Trap!";
-            case COUNTER_OFFENSIVE -> "Counter-Offensive Trap";
-            case ALARM -> "Alarm Trap";
-            case MINER_FATIGUE -> "Miner Fatigue Trap";
+            case ITS_A_TRAP -> "upgrade.name.its_a_trap";
+            case COUNTER_OFFENSIVE -> "upgrade.name.counter_offensive";
+            case ALARM -> "upgrade.name.alarm";
+            case MINER_FATIGUE -> "upgrade.name.miner_fatigue";
         };
     }
 
@@ -802,6 +844,7 @@ public final class Arena {
         generatorProgress.clear();
         trapCooldownUntil.clear();
         lastHits.clear();
+        trapImmuneUntil.clear();
         scoreboards.clear();
         elapsedSeconds = 0;
         countdown = 0;

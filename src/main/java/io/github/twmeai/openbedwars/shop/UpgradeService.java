@@ -79,7 +79,8 @@ public final class UpgradeService implements Listener {
     private ItemStack display(Player player, UpgradeType type, Offer offer) {
         ItemStack stack = new ItemStack(type.icon());
         ItemMeta meta = stack.getItemMeta();
-        meta.displayName(Component.text(type.displayName(), offer.maxed() ? NamedTextColor.GREEN : NamedTextColor.WHITE)
+        meta.displayName(messages.render(player, type.translationKey())
+                .color(offer.maxed() ? NamedTextColor.GREEN : NamedTextColor.WHITE)
                 .decoration(TextDecoration.ITALIC, false));
         List<Component> lore = new ArrayList<>();
         if (offer.level() > 0) {
@@ -129,7 +130,8 @@ public final class UpgradeService implements Listener {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
                 messages.send(member, type.isTrap() ? "upgrade.trap-added" : "upgrade.purchased",
-                        MessageService.text(type.isTrap() ? "trap" : "upgrade", type.displayName()));
+                        MessageService.component(type.isTrap() ? "trap" : "upgrade",
+                                messages.render(member, type.translationKey())));
             }
         }
         render(player, arena, holder);

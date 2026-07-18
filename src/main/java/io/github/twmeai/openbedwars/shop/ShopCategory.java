@@ -21,4 +21,5 @@ public enum ShopCategory {
 
     public String displayName() { return displayName; }
     public Material icon() { return icon; }
+    public String translationKey() { return "shop.category." + name().toLowerCase(java.util.Locale.ROOT); }
 }

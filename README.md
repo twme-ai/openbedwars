@@ -38,10 +38,11 @@ Implemented in the current development build:
 - Iron, gold, diamond, and emerald generators with timed tiers and forge upgrades
 - Hypixel-style item shop categories, permanent armor and shears, tiered tools, potions, and utilities
 - Team upgrades, an ordered three-trap queue, heal pool, and Dragon Buff
+- Working Fireballs, Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers
 - Per-player MiniMessage locales, English and Traditional Chinese translations, and localized scoreboards
 - Game block, liquid, container, entity, and inventory cleanup without replacing the arena world
 
-Still planned before the first stable release: complete special-item behavior, in-game arena setup tools, persistent statistics and progression, reconnect handling, parties, broader automated event tests, and multi-client soak testing. Exact behavior sources and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
+Still planned before the first stable release: in-game arena setup tools, persistent statistics and progression, reconnect handling, parties, broader automated event tests, and multi-client soak testing. Exact behavior sources and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
 
 ## License
 

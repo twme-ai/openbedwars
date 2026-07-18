@@ -6,6 +6,7 @@ import io.github.twmeai.openbedwars.listener.GameListener;
 import io.github.twmeai.openbedwars.message.MessageService;
 import io.github.twmeai.openbedwars.shop.ShopService;
 import io.github.twmeai.openbedwars.shop.UpgradeService;
+import io.github.twmeai.openbedwars.special.SpecialItemService;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -16,6 +17,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
     private ArenaManager arenaManager;
     private ShopService shopService;
     private UpgradeService upgradeService;
+    private SpecialItemService specialItemService;
 
     @Override
     public void onEnable() {
@@ -25,18 +27,23 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         arenaManager = new ArenaManager(this);
         shopService = new ShopService(this, arenaManager);
         upgradeService = new UpgradeService(this, arenaManager);
+        specialItemService = new SpecialItemService(this, arenaManager);
         BedWarsCommand command = new BedWarsCommand(this, arenaManager);
         Objects.requireNonNull(getCommand("bedwars"), "bedwars command").setExecutor(command);
         Objects.requireNonNull(getCommand("bedwars"), "bedwars command").setTabCompleter(command);
         getServer().getPluginManager().registerEvents(new GameListener(this, arenaManager), this);
         getServer().getPluginManager().registerEvents(shopService, this);
         getServer().getPluginManager().registerEvents(upgradeService, this);
+        getServer().getPluginManager().registerEvents(specialItemService, this);
     }
 
     @Override
     public void onDisable() {
         if (arenaManager != null) {
             arenaManager.shutdown();
+        }
+        if (specialItemService != null) {
+            specialItemService.shutdown();
         }
     }
 

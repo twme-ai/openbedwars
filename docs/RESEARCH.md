@@ -11,6 +11,7 @@ This document records the behavior sources consulted before implementation. Open
 - [SBA team upgrade configuration](https://github.com/pronze/SBA/blob/master/plugin/src/main/resources/shops/upgradeShop.yml): cross-reference for sharpness, protection, haste/efficiency, forge, heal pool, dragon buff, and traps.
 - [Screaming BedWars popular-server item shop](https://github.com/ScreamingSandals/BedWars/blob/master/plugin/common/src/main/resources/shop/certain-popular-server/shop.yml) and [upgrade shop](https://github.com/ScreamingSandals/BedWars/blob/master/plugin/common/src/main/resources/shop/certain-popular-server/upgrade-shop.yml): current open-source cross-check for the classic seven-category layout and costs.
 - [AzuraBedWars shop interaction](https://github.com/AzuraMC-Network/AzuraBedWars/blob/master/azurabedwars-plugin/core/src/main/java/cc/azuramc/bedwars/listener/player/PlayerInteractShopListener.java): modern open-source reference for tagged item-shop and team-upgrade NPC interaction.
+- [Screaming BedWars Bridge Egg](https://github.com/ScreamingSandals/BedWars/blob/master/plugin/common/src/main/java/org/screamingsandals/bedwars/special/BridgeEggImpl.java) and [Pop-up Tower](https://github.com/ScreamingSandals/BedWars/blob/master/plugin/common/src/main/java/org/screamingsandals/bedwars/special/PopUpTowerImpl.java): behavior reference for distance-limited team-colored bridge trails and orientation-aware temporary tower blocks.
 
 ## Initial behavior target
 
