@@ -104,6 +104,12 @@ respawn-protection-seconds: 3
 
 After the respawn countdown, a player ignores non-void damage for the configured protection time. Hitting an enemy immediately removes the attacker's protection, while void damage always remains lethal. Set `respawn-protection-seconds` to `0` to disable the window. Protection is removed on death, arena leave, reconnect expiry, and match reset.
 
+## Final eliminations
+
+Once a team's bed is destroyed, each subsequent death is marked as a final kill and permanently moves that player to observer mode. In multi-player teams, eliminating one member does not eliminate the team while another active member remains. The final member's elimination produces one localized team-elimination announcement before victory is evaluated.
+
+A disconnected player keeps their team alive during the configured reconnect grace period. If the final member leaves explicitly or lets that grace period expire, the team is eliminated without a fabricated death or final-kill message.
+
 ## Fireballs
 
 Fireball pacing is configured globally in `config.yml`:

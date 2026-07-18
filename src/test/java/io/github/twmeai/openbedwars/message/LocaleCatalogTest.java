@@ -66,6 +66,16 @@ class LocaleCatalogTest {
         }
     }
 
+    @Test
+    void finalAndTeamEliminationMessagesAreBundled() {
+        for (String locale : Set.of("en_US", "zh_TW")) {
+            YamlConfiguration catalog = locale(locale);
+            for (String key : Set.of("death.normal-final", "death.killed-final", "team.eliminated")) {
+                assertTranslation(catalog, key);
+            }
+        }
+    }
+
     private void assertTranslation(YamlConfiguration catalog, String key) {
         assertTrue(catalog.isString(key), () -> "Missing translation key: " + key);
         assertTrue(!catalog.getString(key, "").isBlank(), () -> "Blank translation key: " + key);

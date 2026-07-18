@@ -91,6 +91,7 @@ public final class Arena {
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
     private final EnemyBaseEntryTracker enemyBaseEntries = new EnemyBaseEntryTracker();
+    private final TeamEliminationTracker teamEliminations = new TeamEliminationTracker();
     private final Map<UUID, TeamColor> dragonTeams = new HashMap<>();
     private final RespawnProtectionTracker respawnProtection = new RespawnProtectionTracker();
     private final PlayerCooldownTracker fireballCooldowns = new PlayerCooldownTracker();
@@ -581,6 +582,7 @@ public final class Arena {
         if (phase == GamePhase.STARTING && !hasEnoughPlayers()) {
             cancelCountdown();
         } else if (phase == GamePhase.RUNNING) {
+            announceTeamElimination(team);
             checkVictory();
         }
         return true;
@@ -743,13 +745,13 @@ public final class Arena {
             if (finalDeath) {
                 killerState.addFinalKill();
             }
-            broadcast("death.killed",
+            broadcast(finalDeath ? "death.killed-final" : "death.killed",
                     MessageService.text("player", victim.getName()),
                     MessageService.text("killer", killer.getName()),
                     MessageService.teamColor("team_color", victimState.team()),
                     MessageService.teamColor("killer_color", killerState.team()));
         } else {
-            broadcast("death.normal",
+            broadcast(finalDeath ? "death.normal-final" : "death.normal",
                     MessageService.text("player", victim.getName()),
                     MessageService.teamColor("team_color", victimState.team()));
         }
@@ -757,6 +759,7 @@ public final class Arena {
             broadcast("player.eliminated",
                     MessageService.text("player", victim.getName()),
                     MessageService.teamColor("team_color", victimState.team()));
+            announceTeamElimination(victimTeam);
         }
 
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -842,6 +845,7 @@ public final class Arena {
         statsRecorded = false;
         generatorClocks.clear();
         enemyBaseEntries.clear();
+        teamEliminations.clear();
         for (TeamState team : teams.values()) {
             team.restoreBed();
         }
@@ -1249,6 +1253,7 @@ public final class Arena {
         broadcast("arena.reconnect-expired",
                 MessageService.text("player", state.playerName()),
                 MessageService.teamColor("team_color", state.team()));
+        announceTeamElimination(teams.get(state.team()));
         checkVictory();
     }
 
@@ -1265,6 +1270,14 @@ public final class Arena {
         if (alive.size() <= 1) {
             beginEnding(alive.isEmpty() ? null : alive.getFirst(), true);
         }
+    }
+
+    private void announceTeamElimination(TeamState team) {
+        if (team.isAlive(players) || !teamEliminations.eliminate(team.color())) return;
+        broadcastLocalized("team.eliminated", player -> new TagResolver[]{
+                MessageService.component("team", messages.render(player, team.color().translationKey())),
+                MessageService.teamColor("team_color", team.color())
+        });
     }
 
     private void beginEnding(TeamState winner, boolean recordStatistics) {
@@ -1372,6 +1385,7 @@ public final class Arena {
         lastHits.clear();
         trapImmuneUntil.clear();
         enemyBaseEntries.clear();
+        teamEliminations.clear();
         respawnProtection.clear();
         fireballCooldowns.clear();
         scoreboards.clear();
