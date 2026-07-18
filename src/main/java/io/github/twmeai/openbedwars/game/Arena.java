@@ -39,7 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 public final class Arena {
     private static final int RESOURCE_CAP = 48;
@@ -50,7 +50,7 @@ public final class Arena {
     private final ArenaDefinition definition;
     private final GameSettings settings;
     private final World world;
-    private final Consumer<UUID> playerRelease;
+    private final BiConsumer<UUID, PlayerSnapshot> playerRelease;
     private final KitService kits = new KitService();
     private final ScoreboardService scoreboards;
     private final Map<UUID, PlayerState> players = new LinkedHashMap<>();
@@ -60,6 +60,7 @@ public final class Arena {
     private final Set<BlockKey> placedBlocks = new HashSet<>();
     private final List<Entity> spawnedEntities = new ArrayList<>();
     private final Set<BukkitTask> respawnTasks = new HashSet<>();
+    private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
     private final Map<String, Long> trapCooldownUntil = new HashMap<>();
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
@@ -75,7 +76,7 @@ public final class Arena {
             ArenaDefinition definition,
             GameSettings settings,
             World world,
-            Consumer<UUID> playerRelease
+            BiConsumer<UUID, PlayerSnapshot> playerRelease
     ) {
         this.plugin = plugin;
         this.messages = plugin.messages();
@@ -350,10 +351,11 @@ public final class Arena {
         players.remove(player.getUniqueId());
         TeamState team = teams.get(state.team());
         team.removeMember(player.getUniqueId());
+        cancelDisconnectTask(player.getUniqueId());
         lastHits.remove(player.getUniqueId());
         lastHits.entrySet().removeIf(entry -> entry.getValue().attacker().equals(player.getUniqueId()));
         cancelRespawnTasksFor(player.getUniqueId());
-        playerRelease.accept(player.getUniqueId());
+        playerRelease.accept(player.getUniqueId(), state.snapshot());
         scoreboards.remove(player);
         state.snapshot().restore(player);
         if (notify) {
@@ -368,6 +370,57 @@ public final class Arena {
         } else if (phase == GamePhase.RUNNING) {
             checkVictory();
         }
+        return true;
+    }
+
+    public boolean disconnect(Player player) {
+        PlayerState state = players.get(player.getUniqueId());
+        if (state == null) return false;
+        if (phase != GamePhase.RUNNING || settings.reconnectGraceSeconds() <= 0) {
+            return leave(player, false);
+        }
+        state.disconnected(true);
+        cancelDisconnectTask(player.getUniqueId());
+        broadcast("arena.player-disconnected",
+                MessageService.text("player", player.getName()),
+                MessageService.number("seconds", settings.reconnectGraceSeconds()),
+                MessageService.teamColor("team_color", state.team()));
+        BukkitTask task = Bukkit.getScheduler().runTaskLater(plugin,
+                () -> expireDisconnect(state), settings.reconnectGraceSeconds() * 20L);
+        disconnectTasks.put(player.getUniqueId(), task);
+        return true;
+    }
+
+    public boolean reconnect(Player player) {
+        PlayerState state = players.get(player.getUniqueId());
+        if (state == null || !state.disconnected()) return false;
+        state.disconnected(false);
+        cancelDisconnectTask(player.getUniqueId());
+        TeamState team = teams.get(state.team());
+        if (phase == GamePhase.WAITING || phase == GamePhase.STARTING) {
+            prepareWaitingPlayer(player);
+        } else if (phase == GamePhase.RUNNING) {
+            if (state.eliminated()) {
+                player.getInventory().clear();
+                player.setGameMode(GameMode.SPECTATOR);
+                player.teleportAsync(definition.spectator().toLocation(world));
+            } else if (state.respawning()) {
+                state.respawning(false);
+                kits.prepareForGame(player, state, team);
+                player.teleportAsync(team.definition().spawn().toLocation(world));
+            } else {
+                player.setGameMode(GameMode.SURVIVAL);
+                player.setAllowFlight(false);
+                kits.givePersistentEquipment(player, state, team);
+            }
+            scoreboards.update(this);
+        } else {
+            player.setGameMode(GameMode.SPECTATOR);
+            player.teleportAsync(definition.spectator().toLocation(world));
+        }
+        broadcast("arena.player-reconnected",
+                MessageService.text("player", player.getName()),
+                MessageService.teamColor("team_color", state.team()));
         return true;
     }
 
@@ -564,6 +617,7 @@ public final class Arena {
         for (PlayerState state : players.values()) {
             state.eliminated(false);
             state.respawning(false);
+            state.disconnected(false);
             Player player = Bukkit.getPlayer(state.playerId());
             if (player == null) {
                 continue;
@@ -792,6 +846,25 @@ public final class Arena {
         }
     }
 
+    private void expireDisconnect(PlayerState state) {
+        if (players.get(state.playerId()) != state || !state.disconnected()) return;
+        disconnectTasks.remove(state.playerId());
+        recordStatistics(Map.of(state, false));
+        players.remove(state.playerId());
+        teams.get(state.team()).removeMember(state.playerId());
+        state.eliminated(true);
+        playerRelease.accept(state.playerId(), state.snapshot());
+        broadcast("arena.reconnect-expired",
+                MessageService.text("player", state.playerName()),
+                MessageService.teamColor("team_color", state.team()));
+        checkVictory();
+    }
+
+    private void cancelDisconnectTask(UUID playerId) {
+        BukkitTask task = disconnectTasks.remove(playerId);
+        if (task != null) task.cancel();
+    }
+
     private void checkVictory() {
         if (phase != GamePhase.RUNNING) {
             return;
@@ -858,6 +931,10 @@ public final class Arena {
             task.cancel();
         }
         respawnTasks.clear();
+        for (BukkitTask task : disconnectTasks.values()) {
+            task.cancel();
+        }
+        disconnectTasks.clear();
         for (Entity entity : List.copyOf(spawnedEntities)) {
             if (entity.isValid()) {
                 entity.remove();
@@ -872,7 +949,7 @@ public final class Arena {
 
         for (PlayerState state : List.copyOf(players.values())) {
             Player player = Bukkit.getPlayer(state.playerId());
-            playerRelease.accept(state.playerId());
+            playerRelease.accept(state.playerId(), state.snapshot());
             if (player != null) {
                 scoreboards.remove(player);
                 state.snapshot().restore(player);

@@ -7,7 +7,6 @@ import io.github.twmeai.openbedwars.game.TeamColor;
 import io.github.twmeai.openbedwars.message.MessageService;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.type.Bed;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;

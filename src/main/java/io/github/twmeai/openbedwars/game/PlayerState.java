@@ -10,6 +10,7 @@ public final class PlayerState {
     private TeamColor team;
     private boolean eliminated;
     private boolean respawning;
+    private boolean disconnected;
     private int kills;
     private int finalKills;
     private int bedsBroken;
@@ -33,6 +34,7 @@ public final class PlayerState {
     public TeamColor team() { return team; }
     public boolean eliminated() { return eliminated; }
     public boolean respawning() { return respawning; }
+    public boolean disconnected() { return disconnected; }
     public int kills() { return kills; }
     public int finalKills() { return finalKills; }
     public int bedsBroken() { return bedsBroken; }
@@ -46,6 +48,7 @@ public final class PlayerState {
     public void team(TeamColor team) { this.team = Objects.requireNonNull(team, "team"); }
     public void eliminated(boolean eliminated) { this.eliminated = eliminated; }
     public void respawning(boolean respawning) { this.respawning = respawning; }
+    public void disconnected(boolean disconnected) { this.disconnected = disconnected; }
     public void addKill() { kills++; }
     public void addFinalKill() { finalKills++; }
     public void addBedBroken() { bedsBroken++; }

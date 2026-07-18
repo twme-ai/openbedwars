@@ -15,6 +15,7 @@ This document records the behavior sources consulted before implementation. Open
 - [Paper database guidance](https://docs.papermc.io/paper/dev/using-databases/) and [scheduler guidance](https://docs.papermc.io/paper/dev/scheduler/): SQLite is appropriate for a small file-backed plugin database; prepared statements prevent injection, and database/file access belongs off the main server thread.
 - [BedWars1058 default statistics](https://github.com/andrei1058/BedWars1058/blob/master/bedwars-api/src/main/java/com/andrei1058/bedwars/api/arena/stats/DefaultStatistics.java): cross-reference for kills, final kills, deaths, final deaths, and beds destroyed as distinct gameplay statistics.
 - [BedWars1058 setup commands](https://github.com/andrei1058/BedWars1058/tree/master/bedwars-plugin/src/main/java/com/andrei1058/bedwars/commands/bedwars/subcmds/sensitive/setup): cross-reference for waiting/spectator positions, team creation, spawns, beds, item/upgrade shops, and generators as the minimum arena setup workflow.
+- [BedWars1058 arena feature documentation](https://github.com/andrei1058/BedWars1058/wiki/Arena-Setup): cross-reference for configurable rejoin support that returns disconnected players to an active game.
 
 ## Initial behavior target
 

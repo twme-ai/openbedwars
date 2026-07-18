@@ -19,6 +19,7 @@ public final class ArenaManager {
     private final OpenBedWarsPlugin plugin;
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
     private final Map<UUID, Arena> playerArenas = new java.util.HashMap<>();
+    private final Map<UUID, PlayerSnapshot> pendingRestores = new java.util.HashMap<>();
     private BukkitTask ticker;
 
     public ArenaManager(OpenBedWarsPlugin plugin) {
@@ -63,6 +64,24 @@ public final class ArenaManager {
         return arena != null && arena.leave(player, notify);
     }
 
+    public boolean disconnect(Player player) {
+        Arena arena = playerArenas.get(player.getUniqueId());
+        return arena != null && arena.disconnect(player);
+    }
+
+    public boolean handleJoin(Player player) {
+        Arena arena = playerArenas.get(player.getUniqueId());
+        if (arena != null && arena.reconnect(player)) {
+            return true;
+        }
+        PlayerSnapshot snapshot = pendingRestores.remove(player.getUniqueId());
+        if (snapshot != null) {
+            Bukkit.getScheduler().runTask(plugin, () -> snapshot.restore(player));
+            return true;
+        }
+        return false;
+    }
+
     public void reload() {
         shutdownArenas();
         plugin.reloadConfig();
@@ -76,7 +95,7 @@ public final class ArenaManager {
                         + definition.worldName() + "' is not loaded");
                 continue;
             }
-            arenas.put(definition.key(), new Arena(plugin, definition, settings, world, playerArenas::remove));
+            arenas.put(definition.key(), new Arena(plugin, definition, settings, world, this::releasePlayer));
         }
         plugin.getLogger().info("Loaded " + arenas.size() + " enabled Bed Wars arena(s).");
     }
@@ -105,6 +124,13 @@ public final class ArenaManager {
                 plugin.getLogger().log(Level.SEVERE, "Arena '" + arena.key() + "' tick failed", exception);
                 arena.forceStop();
             }
+        }
+    }
+
+    private void releasePlayer(UUID playerId, PlayerSnapshot snapshot) {
+        playerArenas.remove(playerId);
+        if (Bukkit.getPlayer(playerId) == null) {
+            pendingRestores.put(playerId, snapshot);
         }
     }
 }

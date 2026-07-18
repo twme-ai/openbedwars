@@ -12,6 +12,7 @@ public record GameSettings(
         int countdownSeconds,
         int respawnSeconds,
         int endingSeconds,
+        int reconnectGraceSeconds,
         int experiencePerMinute,
         int winBonusExperience,
         EventSchedule eventSchedule,
@@ -19,7 +20,7 @@ public record GameSettings(
 ) {
     public GameSettings {
         if (minimumPlayers < 2 || countdownSeconds < 1 || respawnSeconds < 0 || endingSeconds < 1
-                || experiencePerMinute < 0 || winBonusExperience < 0) {
+                || reconnectGraceSeconds < 0 || experiencePerMinute < 0 || winBonusExperience < 0) {
             throw new IllegalArgumentException("Invalid game timing configuration");
         }
     }
@@ -39,6 +40,7 @@ public record GameSettings(
                 config.getInt("countdown-seconds", 20),
                 config.getInt("respawn-seconds", 5),
                 config.getInt("ending-seconds", 10),
+                config.getInt("reconnect-grace-seconds", 120),
                 config.getInt("progression.experience-per-minute", 25),
                 config.getInt("progression.win-bonus-experience", 100),
                 new EventSchedule(events),

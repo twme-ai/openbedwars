@@ -4,6 +4,7 @@ minimum-players: 2
 countdown-seconds: 20
 respawn-seconds: 5
 ending-seconds: 10
+reconnect-grace-seconds: 120
 
 progression:
   experience-per-minute: 25
