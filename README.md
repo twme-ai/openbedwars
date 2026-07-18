@@ -49,7 +49,7 @@ Implemented in the current development build:
 - Final-elimination spectator flight with an active-player teleporter, enemy-hidden observers, and a return-to-lobby item
 - Hypixel-style parties with expiring invites, leadership, moderation, chat, and atomic arena joining
 - Asynchronous top-10 leaderboards for wins, kills, final kills, beds, and level
-- Game block, liquid, container, entity, and inventory cleanup without replacing the arena world
+- Game block, liquid, container, inventory, and match-spawned entity cleanup, including uncollected block drops
 
 The core match loop has also been exercised with two real clients on Paper 1.21.11, including countdown, team placement, bed destruction, final elimination, victory, player restoration, persistent statistics, and arena rollback. Still planned before the first stable release: broader automated event tests and long-running multi-client soak testing. Exact behavior sources, runtime verification, and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
 

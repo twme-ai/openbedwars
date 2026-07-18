@@ -85,7 +85,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     private final Map<String, GeneratorDisplay> generatorDisplays = new HashMap<>();
     private final Map<BlockKey, BlockState> changedBlocks = new LinkedHashMap<>();
     private final Set<BlockKey> placedBlocks = new HashSet<>();
-    private final List<Entity> spawnedEntities = new ArrayList<>();
+    private final Map<UUID, Entity> spawnedEntities = new LinkedHashMap<>();
     private final RespawnCountdownTracker<BukkitTask> respawnCountdowns =
             new RespawnCountdownTracker<>(BukkitTask::cancel);
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
@@ -256,7 +256,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     }
 
     public void trackEntity(Entity entity) {
-        spawnedEntities.add(entity);
+        spawnedEntities.put(entity.getUniqueId(), entity);
     }
 
     public void trackTransientEntity(Entity entity) {
@@ -1375,7 +1375,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
                 .filter(entity -> entity.getScoreboardTags().contains(DRAGON_TAG))
                 .toList()
                 .forEach(Entity::remove);
-        for (Entity entity : List.copyOf(spawnedEntities)) {
+        for (Entity entity : List.copyOf(spawnedEntities.values())) {
             if (entity.isValid()) {
                 entity.remove();
             }

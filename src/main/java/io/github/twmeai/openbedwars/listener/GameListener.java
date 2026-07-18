@@ -25,6 +25,7 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
+import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
@@ -113,6 +114,13 @@ public final class GameListener implements Listener {
                     .filter(arena -> arena.isArenaDragon(dragon))
                     .ifPresent(arena -> arena.trackTransientEntity(event.getEntity()));
         }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onItemSpawn(ItemSpawnEvent event) {
+        arenas.arenaIn(event.getLocation().getWorld())
+                .filter(arena -> arena.phase() == GamePhase.RUNNING || arena.phase() == GamePhase.ENDING)
+                .ifPresent(arena -> arena.trackTransientEntity(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
