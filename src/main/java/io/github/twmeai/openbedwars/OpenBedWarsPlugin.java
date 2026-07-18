@@ -52,6 +52,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(upgradeService, this);
         getServer().getPluginManager().registerEvents(specialItemService, this);
         getServer().getPluginManager().registerEvents(spectatorService, this);
+        getServer().getPluginManager().registerEvents(partyService, this);
     }
 
     @Override

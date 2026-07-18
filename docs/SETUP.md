@@ -101,7 +101,7 @@ An automatic countdown requires both the configured minimum player count and pla
 
 `/bw join random` counts every online party member before selecting an arena. It prefers the waiting or starting arena with the most players among those that can fit the complete online group; a fuller arena with too few remaining slots is skipped. The group join is atomic, so a failed member join rolls back everyone instead of leaving a partial party in the arena.
 
-Offline party members remain in the party but are not reserved an arena slot. When no arena can fit the whole online group, the requester receives a dedicated availability error rather than an arena-not-found message.
+If the leader disconnects while another member remains online, leadership passes to the first online member in stable membership order. If everyone is offline, the first member who returns becomes leader. The disconnected leader remains in the party, and offline party members are not reserved an arena slot. When no arena can fit the whole online group, the requester receives a dedicated availability error rather than an arena-not-found message.
 
 ## Item shop inventory handling
 

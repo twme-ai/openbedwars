@@ -7,6 +7,11 @@ import io.github.twmeai.openbedwars.message.MessageService;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
@@ -15,9 +20,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-public final class PartyService {
+public final class PartyService implements Listener {
     private static final List<String> SUBCOMMANDS = List.of(
             "invite", "accept", "decline", "leave", "kick", "promote", "disband", "list", "chat", "help"
     );
@@ -117,6 +124,33 @@ public final class PartyService {
         joinArena(requester, arena);
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        UUID departingId = event.getPlayer().getUniqueId();
+        Party party = partyByMember.get(departingId);
+        if (party == null || !party.leader().equals(departingId)) return;
+
+        promoteOnlineSuccessor(party, departingId);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Party party = partyByMember.get(event.getPlayer().getUniqueId());
+        if (party == null || isOnline(party.leader())) return;
+
+        promoteOnlineSuccessor(party, party.leader());
+    }
+
+    private void promoteOnlineSuccessor(Party party, UUID departingLeader) {
+        Set<UUID> onlineMemberIds = onlineMembers(party).stream()
+                .map(Player::getUniqueId)
+                .collect(Collectors.toSet());
+        UUID successor = party.transferLeadershipFrom(departingLeader, onlineMemberIds);
+        if (successor != null) {
+            sendParty(party, "party.promoted", MessageService.text("player", party.name(successor)));
+        }
+    }
+
     public void shutdown() {
         for (Invitation invitation : invitations.values()) invitation.task().cancel();
         invitations.clear();
@@ -189,6 +223,7 @@ public final class PartyService {
         party.add(player.getUniqueId(), player.getName());
         partyByMember.put(player.getUniqueId(), party);
         sendParty(party, "party.joined", MessageService.text("player", player.getName()));
+        if (!isOnline(party.leader())) promoteOnlineSuccessor(party, party.leader());
     }
 
     private void decline(Player player) {
@@ -307,6 +342,11 @@ public final class PartyService {
                 .filter(java.util.Objects::nonNull)
                 .filter(Player::isOnline)
                 .toList();
+    }
+
+    private boolean isOnline(UUID playerId) {
+        Player player = Bukkit.getPlayer(playerId);
+        return player != null && player.isOnline();
     }
 
     private void disbandParty(Party party) {

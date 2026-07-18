@@ -2,6 +2,7 @@ package io.github.twmeai.openbedwars.party;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 final class Party {
@@ -22,4 +23,15 @@ final class Party {
     void remove(UUID playerId) { members.remove(playerId); }
     String name(UUID playerId) { return members.get(playerId); }
     UUID firstMember() { return members.keySet().iterator().next(); }
+
+    UUID transferLeadershipFrom(UUID departingLeader, Set<UUID> onlineMembers) {
+        if (!leader.equals(departingLeader)) return null;
+        for (UUID member : members.keySet()) {
+            if (!member.equals(departingLeader) && onlineMembers.contains(member)) {
+                leader = member;
+                return member;
+            }
+        }
+        return null;
+    }
 }
