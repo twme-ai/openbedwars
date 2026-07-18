@@ -4,6 +4,7 @@ import io.github.twmeai.openbedwars.OpenBedWarsPlugin;
 import io.github.twmeai.openbedwars.game.Arena;
 import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.game.GamePhase;
+import io.github.twmeai.openbedwars.game.PlayerState;
 import io.github.twmeai.openbedwars.game.TeamColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -15,10 +16,12 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.IronGolem;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Silverfish;
+import org.bukkit.entity.TNTPrimed;
 import org.bukkit.entity.ThrowableProjectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -26,6 +29,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -46,6 +50,8 @@ import java.util.UUID;
 
 public final class SpecialItemService implements Listener {
     private static final double BRIDGE_EGG_MAX_DISTANCE_SQUARED = 50 * 50;
+    private static final double DEFENDER_TARGET_RANGE = 16;
+    private static final double DEFENDER_TARGET_RANGE_SQUARED = DEFENDER_TARGET_RANGE * DEFENDER_TARGET_RANGE;
 
     private final OpenBedWarsPlugin plugin;
     private final ArenaManager arenas;
@@ -88,9 +94,10 @@ public final class SpecialItemService implements Listener {
     public void onProjectileHit(ProjectileHitEvent event) {
         LaunchedUtility utility = launchedUtilities.remove(event.getEntity().getUniqueId());
         if (utility == null || !utility.type().equals("bed_bug")) return;
-        Player owner = Bukkit.getPlayer(utility.owner());
-        if (owner == null || utility.arena().phase() != GamePhase.RUNNING) return;
-        TeamColor team = utility.arena().playerState(owner.getUniqueId()).orElseThrow().team();
+        if (utility.arena().phase() != GamePhase.RUNNING) return;
+        TeamColor team = utility.arena().playerState(utility.owner())
+                .map(state -> state.team()).orElse(null);
+        if (team == null) return;
         Silverfish silverfish = event.getEntity().getWorld().spawn(event.getEntity().getLocation(), Silverfish.class, mob -> {
             mob.customName(net.kyori.adventure.text.Component.text("Bed Bug", team.textColor()));
             mob.setCustomNameVisible(true);
@@ -140,13 +147,23 @@ public final class SpecialItemService implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDefenderDamage(EntityDamageByEntityEvent event) {
+        Defender attacker = defenders.get(event.getDamager().getUniqueId());
+        if (attacker != null && !isEnemyTarget(attacker, event.getEntity())) {
+            event.setCancelled(true);
+            return;
+        }
         Defender defender = defenders.get(event.getEntity().getUniqueId());
         if (defender == null) return;
-        Player attacker = playerDamager(event.getDamager());
-        if (attacker == null) return;
-        TeamColor attackerTeam = defender.arena().playerState(attacker.getUniqueId())
-                .map(state -> state.team()).orElse(null);
-        if (attackerTeam == defender.team()) {
+        Player player = playerDamager(event.getDamager());
+        if (player != null && !isEnemyTarget(defender, player)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onDefenderTarget(EntityTargetLivingEntityEvent event) {
+        Defender defender = defenders.get(event.getEntity().getUniqueId());
+        if (defender != null && event.getTarget() != null && !isEnemyTarget(defender, event.getTarget())) {
             event.setCancelled(true);
         }
     }
@@ -213,10 +230,17 @@ public final class SpecialItemService implements Listener {
                 if (defender.mob().isValid()) defender.mob().remove();
                 return true;
             }
-            Player target = defender.mob().getWorld().getPlayers().stream()
-                    .filter(player -> defender.arena().isEnemy(defender.team(), player))
-                    .filter(player -> player.getLocation().distanceSquared(defender.mob().getLocation()) <= 16 * 16)
-                    .min(Comparator.comparingDouble(player -> player.getLocation().distanceSquared(defender.mob().getLocation())))
+            LivingEntity target = defender.mob().getWorld()
+                    .getNearbyEntities(defender.mob().getLocation(),
+                            DEFENDER_TARGET_RANGE, DEFENDER_TARGET_RANGE, DEFENDER_TARGET_RANGE).stream()
+                    .filter(LivingEntity.class::isInstance)
+                    .map(LivingEntity.class::cast)
+                    .filter(entity -> entity instanceof Player || defenders.containsKey(entity.getUniqueId()))
+                    .filter(entity -> entity.getLocation().distanceSquared(defender.mob().getLocation())
+                            <= DEFENDER_TARGET_RANGE_SQUARED)
+                    .filter(entity -> isEnemyTarget(defender, entity))
+                    .min(Comparator.comparingDouble(entity ->
+                            entity.getLocation().distanceSquared(defender.mob().getLocation())))
                     .orElse(null);
             defender.mob().setTarget(target);
             return false;
@@ -315,7 +339,22 @@ public final class SpecialItemService implements Listener {
     private Player playerDamager(Entity entity) {
         if (entity instanceof Player player) return player;
         if (entity instanceof Projectile projectile && projectile.getShooter() instanceof Player player) return player;
+        if (entity instanceof TNTPrimed tnt && tnt.getSource() instanceof Player player) return player;
         return null;
+    }
+
+    private boolean isEnemyTarget(Defender defender, Entity target) {
+        if (target instanceof Player player) {
+            PlayerState state = defender.arena()
+                    .playerState(player.getUniqueId()).orElse(null);
+            return state != null && DefenderCombatPolicy.isEnemy(
+                    defender.team(), state.team(), true,
+                    !state.eliminated() && !state.respawning() && !state.disconnected());
+        }
+        Defender targetDefender = defenders.get(target.getUniqueId());
+        return targetDefender != null && DefenderCombatPolicy.isEnemy(
+                defender.team(), targetDefender.team(), defender.arena() == targetDefender.arena(),
+                targetDefender.mob().isValid() && !targetDefender.mob().isDead());
     }
 
     private record LaunchedUtility(String type, UUID owner, Arena arena) {

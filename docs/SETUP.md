@@ -156,6 +156,12 @@ The defaults reproduce the familiar half-second cooldown and Slowness IV after a
 
 Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired projectiles are registered to their arena and removed during reset. Placed TNT is primed immediately, attributed to its placer, and included in the same cleanup so it cannot explode after a forced stop.
 
+## Team-owned defenders
+
+Bed Bugs and Dream Defenders belong to the team that deployed them. Within 16 blocks they target only active enemy players or an opposing team's defender. Allied, eliminated, respawning, disconnected, and out-of-arena players are not valid targets; those players also cannot damage a defender, and a defender cannot damage them.
+
+If a Bed Bug's owner explicitly leaves the arena before the snowball lands, the projectile is discarded without spawning a defender. Every spawned defender remains tied to the arena cleanup lifecycle and is removed when its lifetime or the game ends.
+
 ## Traps
 
 An enemy crossing into the seven-block radius around a team spawn consumes the first trap in that team's ordered queue. Remaining inside the radius does not consume another trap: the enemy must leave and enter again. Queued traps become inactive when the team's bed is destroyed.
