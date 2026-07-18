@@ -54,6 +54,7 @@ public final class ShopService implements Listener {
             Material.WOODEN_PICKAXE, Material.IRON_PICKAXE, Material.GOLDEN_PICKAXE, Material.DIAMOND_PICKAXE);
     private static final Set<Material> AXES = EnumSet.of(
             Material.WOODEN_AXE, Material.STONE_AXE, Material.IRON_AXE, Material.DIAMOND_AXE);
+    private static final Set<Material> DEFAULT_SWORDS = Set.of(Material.WOODEN_SWORD);
     private static final Set<ShopItem> QUICK_BUY = EnumSet.of(
             ShopItem.WOOL,
             ShopItem.STONE_SWORD,
@@ -212,18 +213,27 @@ public final class ShopService implements Listener {
                     MessageService.component("resource", messages.render(player, offer.currency().translationKey())));
             return false;
         }
-        if (!canFit(player, item)) {
+        ItemStack inventoryGrant = inventoryGrant(item, offer, team);
+        if (!canFit(player, item, offer, inventoryGrant)) {
             messages.send(player, "error.inventory-full");
             return false;
         }
         InventoryCurrency.take(player.getInventory(), offer.currency(), offer.cost());
-        grant(player, arena, state, team, item, offer);
+        grant(player, arena, state, team, item, offer, inventoryGrant);
         messages.send(player, "shop.purchased",
                 MessageService.component("item", messages.render(player, item.translationKey())));
         return true;
     }
 
-    private void grant(Player player, Arena arena, PlayerState state, TeamState team, ShopItem item, Offer offer) {
+    private void grant(
+            Player player,
+            Arena arena,
+            PlayerState state,
+            TeamState team,
+            ShopItem item,
+            Offer offer,
+            ItemStack inventoryGrant
+    ) {
         switch (item.action()) {
             case ARMOR -> {
                 state.armorTier(item.armorTier());
@@ -244,8 +254,10 @@ public final class ShopService implements Listener {
                 arena.refreshPersistentEquipment(player);
             }
             default -> {
-                ItemStack granted = createGrantedItem(item, team);
-                player.getInventory().addItem(granted);
+                if (item.action() == ShopItem.Action.SWORD) {
+                    removeMaterials(player, DEFAULT_SWORDS);
+                }
+                giveOrDrop(player, arena, inventoryGrant);
                 if (item.action() == ShopItem.Action.SWORD) {
                     arena.applyTeamEnchantments(team);
                 }
@@ -330,21 +342,52 @@ public final class ShopService implements Listener {
         return item.icon();
     }
 
-    private boolean canFit(Player player, ShopItem item) {
-        if (item.action() == ShopItem.Action.ARMOR || item.action() == ShopItem.Action.SHEARS
-                || item.action() == ShopItem.Action.PICKAXE || item.action() == ShopItem.Action.AXE) {
+    private ItemStack inventoryGrant(ShopItem item, Offer offer, TeamState team) {
+        return switch (item.action()) {
+            case ARMOR -> null;
+            case SHEARS -> new ItemStack(Material.SHEARS);
+            case PICKAXE, AXE -> new ItemStack(displayMaterial(item, offer.tier()));
+            default -> createGrantedItem(item, team);
+        };
+    }
+
+    private boolean canFit(Player player, ShopItem item, Offer offer, ItemStack granted) {
+        if (item.action() == ShopItem.Action.ARMOR) {
             return true;
         }
-        return player.getInventory().firstEmpty() >= 0
-                || player.getInventory().contains(item.icon());
+        Set<Material> replacedMaterials = switch (item.action()) {
+            case SWORD -> DEFAULT_SWORDS;
+            case PICKAXE -> PICKAXES;
+            case AXE -> AXES;
+            default -> Set.of();
+        };
+        return ShopInventoryPolicy.canFitAfterPayment(
+                player.getInventory().getStorageContents(),
+                player.getInventory().getMaxStackSize(),
+                offer.currency().material(),
+                offer.cost(),
+                replacedMaterials,
+                granted
+        );
     }
 
     private void removeMaterials(Player player, Set<Material> materials) {
-        for (ItemStack stack : player.getInventory().getStorageContents()) {
+        ItemStack[] contents = player.getInventory().getStorageContents();
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack stack = contents[slot];
             if (stack != null && materials.contains(stack.getType())) {
-                player.getInventory().remove(stack);
+                contents[slot] = null;
             }
         }
+        player.getInventory().setStorageContents(contents);
+    }
+
+    private void giveOrDrop(Player player, Arena arena, ItemStack granted) {
+        player.getInventory().addItem(granted).values().forEach(leftover -> {
+            org.bukkit.entity.Item dropped = player.getWorld().dropItem(player.getLocation(), leftover);
+            dropped.setPickupDelay(0);
+            arena.trackEntity(dropped);
+        });
     }
 
     private void configurePotion(ItemStack stack, PotionEffectType type, int duration, int amplifier, Color color) {

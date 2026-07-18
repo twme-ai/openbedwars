@@ -91,6 +91,12 @@ Team Forge upgrades follow the standard four-tier progression:
 
 Emerald Forge deliberately keeps the Golden Forge iron and gold rate. Its upgrade is the new Emerald generator; Molten Forge is the next and final iron/gold speed increase.
 
+## Item shop inventory handling
+
+Purchases are capacity-checked against the inventory state after payment and any item replacement. A payment that consumes its last resource can free the slot needed by the product, while a matching but already-full stack does not count as available capacity. If the complete product cannot fit, the purchase is rejected before currency is removed.
+
+Buying a stone, iron, or diamond sword replaces the default wooden sword instead of occupying a second slot. Purchased swords are lost on death; the wooden fallback returns with the respawn kit.
+
 ## Protected areas
 
 New arenas protect blocks around team spawns, shops, forges, and map generators. The defaults follow the commonly used Bed Wars protection radii and can be changed per arena in `arenas.yml`:
