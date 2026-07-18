@@ -1,0 +1,24 @@
+package io.github.twmeai.openbedwars.game;
+
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class PlayerProgressionTest {
+    @Test
+    void toolsDowngradeOneTierButNeverBelowWood() {
+        assertEquals(ToolTier.GOLD, ToolTier.DIAMOND.downgrade());
+        assertEquals(ToolTier.IRON, ToolTier.GOLD.downgrade());
+        assertEquals(ToolTier.WOOD, ToolTier.IRON.downgrade());
+        assertEquals(ToolTier.WOOD, ToolTier.WOOD.downgrade());
+        assertEquals(ToolTier.NONE, ToolTier.NONE.downgrade());
+    }
+
+    @Test
+    void resourceNamesHandleUncountableCurrencies() {
+        assertEquals("iron", ResourceType.IRON.displayName(2));
+        assertEquals("gold", ResourceType.GOLD.displayName(2));
+        assertEquals("diamonds", ResourceType.DIAMOND.displayName(2));
+        assertEquals("emerald", ResourceType.EMERALD.displayName(1));
+    }
+}

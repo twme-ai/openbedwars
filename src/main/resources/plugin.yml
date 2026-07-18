@@ -1,0 +1,19 @@
+name: OpenBedWars
+version: '${version}'
+main: io.github.twmeai.openbedwars.OpenBedWarsPlugin
+description: An open-source, Hypixel-inspired Bed Wars implementation for modern Paper.
+api-version: '1.21.11'
+authors: [twme-ai]
+website: https://github.com/twme-ai/openbedwars
+commands:
+  bedwars:
+    description: Main OpenBedWars command.
+    usage: /bedwars help
+    aliases: [bw]
+permissions:
+  openbedwars.play:
+    description: Allows players to join and leave arenas.
+    default: true
+  openbedwars.admin:
+    description: Allows arena administration and configuration reloads.
+    default: op

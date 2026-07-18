@@ -1,0 +1,32 @@
+# Copy this section and set enabled to true after completing every location.
+arenas:
+  example:
+    enabled: false
+    display-name: Example
+    world: bedwars_example
+    min-players: 2
+    max-players: 8
+    players-per-team: 1
+    lobby: { x: 0.5, y: 100.0, z: 0.5, yaw: 0.0, pitch: 0.0 }
+    spectator: { x: 0.5, y: 110.0, z: 0.5, yaw: 0.0, pitch: 0.0 }
+    teams:
+      red:
+        spawn: { x: -40.5, y: 65.0, z: 0.5, yaw: -90.0, pitch: 0.0 }
+        bed-head: { x: -36, y: 65, z: 0 }
+        bed-foot: { x: -37, y: 65, z: 0 }
+        item-shop: { x: -43.5, y: 65.0, z: -3.5, yaw: 0.0, pitch: 0.0 }
+        upgrade-shop: { x: -43.5, y: 65.0, z: 4.5, yaw: 180.0, pitch: 0.0 }
+        forge: { x: -45.5, y: 65.0, z: 0.5 }
+      blue:
+        spawn: { x: 40.5, y: 65.0, z: 0.5, yaw: 90.0, pitch: 0.0 }
+        bed-head: { x: 36, y: 65, z: 0 }
+        bed-foot: { x: 37, y: 65, z: 0 }
+        item-shop: { x: 43.5, y: 65.0, z: 4.5, yaw: 180.0, pitch: 0.0 }
+        upgrade-shop: { x: 43.5, y: 65.0, z: -3.5, yaw: 0.0, pitch: 0.0 }
+        forge: { x: 45.5, y: 65.0, z: 0.5 }
+    generators:
+      diamond:
+        - { x: 0.5, y: 65.0, z: -25.5 }
+        - { x: 0.5, y: 65.0, z: 25.5 }
+      emerald:
+        - { x: 0.5, y: 65.0, z: 0.5 }
