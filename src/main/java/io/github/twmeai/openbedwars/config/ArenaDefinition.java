@@ -14,6 +14,8 @@ public record ArenaDefinition(
         int minPlayers,
         int maxPlayers,
         int playersPerTeam,
+        int voidKillY,
+        int maxBuildY,
         Position lobby,
         Position spectator,
         Map<TeamColor, TeamDefinition> teams,
@@ -37,5 +39,16 @@ public record ArenaDefinition(
         if (teams.size() < 2) {
             throw new IllegalArgumentException("Arena " + key + " requires at least two teams");
         }
+        if (maxBuildY <= voidKillY) {
+            throw new IllegalArgumentException("max-build-y must be above void-kill-y for arena " + key);
+        }
+    }
+
+    public boolean isVoid(double y) {
+        return y <= voidKillY;
+    }
+
+    public boolean canBuildAt(int y) {
+        return y < maxBuildY;
     }
 }

@@ -7,9 +7,13 @@ import io.github.twmeai.openbedwars.config.Position;
 import io.github.twmeai.openbedwars.message.MessageService;
 import io.github.twmeai.openbedwars.statistics.PlayerIdentity;
 import io.github.twmeai.openbedwars.statistics.StatsDelta;
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
+import io.papermc.paper.registry.keys.DamageTypeKeys;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
+import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -17,6 +21,8 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.damage.DamageSource;
+import org.bukkit.damage.DamageType;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Item;
@@ -44,6 +50,9 @@ import java.util.function.BiConsumer;
 public final class Arena {
     private static final int RESOURCE_CAP = 48;
     private static final int RARE_RESOURCE_CAP = 8;
+    private static final DamageType VOID_DAMAGE_TYPE = RegistryAccess.registryAccess()
+            .getRegistry(RegistryKey.DAMAGE_TYPE)
+            .getOrThrow(DamageTypeKeys.OUT_OF_WORLD);
 
     private final OpenBedWarsPlugin plugin;
     private final MessageService messages;
@@ -70,6 +79,7 @@ public final class Arena {
     private int elapsedSeconds;
     private int endingCountdown;
     private boolean statsRecorded;
+    private Boolean previousImmediateRespawn;
 
     public Arena(
             OpenBedWarsPlugin plugin,
@@ -195,7 +205,8 @@ public final class Arena {
 
     public boolean handleBucketEmpty(Player player, Block affectedBlock) {
         PlayerState state = players.get(player.getUniqueId());
-        if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()) return false;
+        if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()
+                || !definition.canBuildAt(affectedBlock.getY())) return false;
         captureBeforeChange(affectedBlock);
         placedBlocks.add(BlockKey.of(affectedBlock));
         return true;
@@ -207,10 +218,12 @@ public final class Arena {
         return placedBlocks.remove(BlockKey.of(affectedBlock));
     }
 
-    public void handleFluidSpread(Block source, Block destination) {
-        if (!placedBlocks.contains(BlockKey.of(source))) return;
+    public boolean handleFluidSpread(Block source, Block destination) {
+        if (!placedBlocks.contains(BlockKey.of(source))) return true;
+        if (!definition.canBuildAt(destination.getY())) return false;
         captureBeforeChange(destination);
         placedBlocks.add(BlockKey.of(destination));
+        return true;
     }
 
     public void dropDeathResources(Location location, List<ItemStack> resources) {
@@ -226,7 +239,7 @@ public final class Arena {
     }
 
     public boolean placeGeneratedBlock(Block block, BlockData data) {
-        if (phase != GamePhase.RUNNING || !block.getWorld().equals(world)) return false;
+        if (phase != GamePhase.RUNNING || !block.getWorld().equals(world) || !definition.canBuildAt(block.getY())) return false;
         BlockKey key = BlockKey.of(block);
         if (!block.isEmpty() && !placedBlocks.contains(key)) return false;
         captureBeforeChange(block);
@@ -250,11 +263,29 @@ public final class Arena {
     }
 
     public void handleMovement(Player intruder) {
-        if (phase != GamePhase.RUNNING) {
+        PlayerState intruderState = players.get(intruder.getUniqueId());
+        if (intruderState == null) {
             return;
         }
-        PlayerState intruderState = players.get(intruder.getUniqueId());
-        if (intruderState == null || intruderState.eliminated() || intruderState.respawning()) {
+        if (definition.isVoid(intruder.getLocation().getY())) {
+            if (phase == GamePhase.RUNNING && !intruderState.eliminated() && !intruderState.respawning()) {
+                intruder.damage(1000.0, DamageSource.builder(VOID_DAMAGE_TYPE)
+                        .withDamageLocation(intruder.getLocation())
+                        .build());
+            } else {
+                Location destination = switch (phase) {
+                    case WAITING, STARTING -> definition.lobby().toLocation(world);
+                    case RUNNING -> intruderState.eliminated()
+                            ? definition.spectator().toLocation(world)
+                            : teams.get(intruderState.team()).definition().spawn().toLocation(world);
+                    case ENDING -> definition.spectator().toLocation(world);
+                };
+                intruder.setFallDistance(0);
+                intruder.teleportAsync(destination);
+            }
+            return;
+        }
+        if (phase != GamePhase.RUNNING || intruderState.eliminated() || intruderState.respawning()) {
             return;
         }
         if (trapImmuneUntil.getOrDefault(intruder.getUniqueId(), 0L) > System.currentTimeMillis()) {
@@ -499,7 +530,8 @@ public final class Arena {
 
     public boolean handlePlace(Player player, Block block, BlockState replacedState) {
         PlayerState state = players.get(player.getUniqueId());
-        if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()) {
+        if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()
+                || !definition.canBuildAt(block.getY())) {
             return false;
         }
         BlockKey key = BlockKey.of(block);
@@ -572,12 +604,12 @@ public final class Arena {
                     MessageService.teamColor("team_color", victimState.team()));
         }
 
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (!victim.isOnline() || !players.containsKey(victim.getUniqueId())) {
                 return;
             }
             victim.spigot().respawn();
-        });
+        }, 3L);
         if (finalDeath) {
             checkVictory();
         }
@@ -647,6 +679,10 @@ public final class Arena {
             return;
         }
         phase = GamePhase.RUNNING;
+        previousImmediateRespawn = world.getGameRuleValue(GameRules.IMMEDIATE_RESPAWN);
+        if (!world.setGameRule(GameRules.IMMEDIATE_RESPAWN, true)) {
+            plugin.getLogger().warning("Could not enable immediate respawn for arena '" + key() + "'");
+        }
         elapsedSeconds = 0;
         statsRecorded = false;
         generatorProgress.clear();
@@ -967,6 +1003,10 @@ public final class Arena {
     }
 
     private void resetArena() {
+        if (previousImmediateRespawn != null) {
+            world.setGameRule(GameRules.IMMEDIATE_RESPAWN, previousImmediateRespawn);
+            previousImmediateRespawn = null;
+        }
         for (BukkitTask task : List.copyOf(respawnTasks)) {
             task.cancel();
         }

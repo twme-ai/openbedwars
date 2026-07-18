@@ -19,6 +19,15 @@ Set the shared locations while standing at each point:
 /bw setup spectator <arena>
 ```
 
+Set the instant void-death line while standing at its Y level, then set the first Y level where block placement must be denied:
+
+```text
+/bw setup voidheight <arena>
+/bw setup buildheight <arena>
+```
+
+The defaults are Y 0 for void death and Y 180 for the exclusive build limit. These values are stored per arena as `void-kill-y` and `max-build-y`; the build limit must be above the void line.
+
 Add at least two teams. Supported colors are `red`, `blue`, `green`, `yellow`, `aqua`, `white`, `pink`, and `gray`.
 
 ```text

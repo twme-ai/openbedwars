@@ -76,6 +76,10 @@ public final class GameListener implements Listener {
         arenas.arenaOf(event.getPlayer()).ifPresent(arena -> {
             if (!arena.handlePlace(event.getPlayer(), event.getBlockPlaced(), event.getBlockReplacedState())) {
                 event.setCancelled(true);
+                if (arena.phase() == GamePhase.RUNNING
+                        && !arena.definition().canBuildAt(event.getBlockPlaced().getY())) {
+                    plugin.messages().send(event.getPlayer(), "error.build-height");
+                }
             } else if (event.getBlockPlaced().getType() == Material.TNT) {
                 arena.removePlacedBlock(event.getBlockPlaced());
                 event.getBlockPlaced().setType(Material.AIR, false);
@@ -226,10 +230,12 @@ public final class GameListener implements Listener {
         });
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onFluidFlow(BlockFromToEvent event) {
         arenas.arenaIn(event.getBlock().getWorld())
-                .ifPresent(arena -> arena.handleFluidSpread(event.getBlock(), event.getToBlock()));
+                .ifPresent(arena -> {
+                    if (!arena.handleFluidSpread(event.getBlock(), event.getToBlock())) event.setCancelled(true);
+                });
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

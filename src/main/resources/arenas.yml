@@ -7,6 +7,8 @@ arenas:
     min-players: 2
     max-players: 8
     players-per-team: 1
+    void-kill-y: 0
+    max-build-y: 180
     lobby: { x: 0.5, y: 100.0, z: 0.5, yaw: 0.0, pitch: 0.0 }
     spectator: { x: 0.5, y: 110.0, z: 0.5, yaw: 0.0, pitch: 0.0 }
     teams:

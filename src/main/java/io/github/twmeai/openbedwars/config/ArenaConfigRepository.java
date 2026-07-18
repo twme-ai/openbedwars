@@ -58,6 +58,8 @@ public final class ArenaConfigRepository {
                 section.getInt("min-players", 2),
                 section.getInt("max-players", teams.size()),
                 section.getInt("players-per-team", 1),
+                section.getInt("void-kill-y", 0),
+                section.getInt("max-build-y", 180),
                 position(section, "lobby"),
                 position(section, "spectator"),
                 teams,

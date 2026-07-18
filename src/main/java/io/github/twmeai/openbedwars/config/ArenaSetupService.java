@@ -24,7 +24,7 @@ import java.util.Map;
 
 public final class ArenaSetupService {
     private static final List<String> OPERATIONS = List.of(
-            "create", "lobby", "spectator", "addteam", "teamspawn", "bed",
+            "create", "lobby", "spectator", "voidheight", "buildheight", "addteam", "teamspawn", "bed",
             "itemshop", "upgradeshop", "forge", "generator", "enable", "disable", "delete"
     );
 
@@ -53,6 +53,8 @@ public final class ArenaSetupService {
                 case "create" -> create(player, args);
                 case "lobby" -> location(player, args, "lobby");
                 case "spectator" -> location(player, args, "spectator");
+                case "voidheight" -> height(player, args, "void-kill-y");
+                case "buildheight" -> height(player, args, "max-build-y");
                 case "addteam" -> addTeam(player, args);
                 case "teamspawn" -> teamLocation(player, args, "spawn");
                 case "bed" -> bed(player, args);
@@ -120,6 +122,8 @@ public final class ArenaSetupService {
         yaml.set(root + ".min-players", 2);
         yaml.set(root + ".max-players", playersPerTeam * 2);
         yaml.set(root + ".players-per-team", playersPerTeam);
+        yaml.set(root + ".void-kill-y", 0);
+        yaml.set(root + ".max-build-y", 180);
         save(yaml);
         plugin.messages().send(player, "setup.created", MessageService.text("arena", key));
     }
@@ -128,6 +132,14 @@ public final class ArenaSetupService {
         SetupContext context = context(player, args, 3);
         if (context == null) return;
         context.yaml().set(context.path() + "." + field, serialize(player.getLocation(), true));
+        save(context.yaml());
+        saved(player, field, context.key());
+    }
+
+    private void height(Player player, String[] args, String field) throws IOException, InvalidConfigurationException {
+        SetupContext context = context(player, args, 3);
+        if (context == null) return;
+        context.yaml().set(context.path() + "." + field, player.getLocation().getBlockY());
         save(context.yaml());
         saved(player, field, context.key());
     }
