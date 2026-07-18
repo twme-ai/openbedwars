@@ -86,6 +86,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     private final Map<String, GeneratorDisplay> generatorDisplays = new HashMap<>();
     private final Map<BlockKey, BlockState> changedBlocks = new LinkedHashMap<>();
     private final Set<BlockKey> placedBlocks = new HashSet<>();
+    private final GeneratedBlockReservations generatedBlockReservations = new GeneratedBlockReservations();
     private final Map<UUID, Entity> spawnedEntities = new LinkedHashMap<>();
     private final Set<UUID> pendingEntityRemovals = new HashSet<>();
     private final RespawnCountdownTracker<BukkitTask> respawnCountdowns =
@@ -317,7 +318,8 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     public boolean handleBucketEmpty(Player player, Block affectedBlock) {
         PlayerState state = players.get(player.getUniqueId());
         if (phase != GamePhase.RUNNING || state == null || state.eliminated() || state.respawning()
-                || !definition.canBuildAt(affectedBlock.getY()) || isProtectedBlock(affectedBlock)) return false;
+                || !definition.canBuildAt(affectedBlock.getY()) || isProtectedBlock(affectedBlock)
+                || generatedBlockReservations.contains(BlockKey.of(affectedBlock))) return false;
         captureBeforeChange(affectedBlock);
         placedBlocks.add(BlockKey.of(affectedBlock));
         return true;
@@ -331,7 +333,8 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
 
     public boolean handleFluidSpread(Block source, Block destination) {
         if (!placedBlocks.contains(BlockKey.of(source))) return true;
-        if (!definition.canBuildAt(destination.getY()) || isProtectedBlock(destination)) return false;
+        if (!definition.canBuildAt(destination.getY()) || isProtectedBlock(destination)
+                || generatedBlockReservations.contains(BlockKey.of(destination))) return false;
         captureBeforeChange(destination);
         placedBlocks.add(BlockKey.of(destination));
         return true;
@@ -402,7 +405,30 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         if (phase != GamePhase.RUNNING || !block.getWorld().equals(world)
                 || !definition.canBuildAt(block.getY()) || isProtectedBlock(block)) return false;
         BlockKey key = BlockKey.of(block);
-        return block.isEmpty() || placedBlocks.contains(key);
+        return block.isEmpty() && !generatedBlockReservations.contains(key);
+    }
+
+    public boolean reserveGeneratedBlocks(List<Block> blocks) {
+        if (blocks.stream().anyMatch(block -> !canPlaceGeneratedBlock(block))) {
+            return false;
+        }
+        return generatedBlockReservations.reserve(blocks.stream().map(BlockKey::of).toList());
+    }
+
+    public void releaseGeneratedBlocks(List<Block> blocks) {
+        generatedBlockReservations.release(blocks.stream().map(BlockKey::of).toList());
+    }
+
+    public boolean placeReservedGeneratedBlock(Block block, BlockData data) {
+        BlockKey key = BlockKey.of(block);
+        if (!generatedBlockReservations.contains(key) || phase != GamePhase.RUNNING || !block.isEmpty()) {
+            return false;
+        }
+        generatedBlockReservations.claim(key);
+        captureBeforeChange(block);
+        placedBlocks.add(key);
+        block.setBlockData(data, false);
+        return true;
     }
 
     public boolean placeGeneratedBlock(Block block, BlockData data) {
@@ -733,6 +759,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         if (!definition.canBuildAt(block.getY())) return PlaceResult.BUILD_LIMIT;
         if (isProtectedBlock(block)) return PlaceResult.PROTECTED;
         BlockKey key = BlockKey.of(block);
+        if (generatedBlockReservations.contains(key)) return PlaceResult.PROTECTED;
         changedBlocks.putIfAbsent(key, replacedState);
         placedBlocks.add(key);
         return PlaceResult.ALLOWED;
@@ -1425,6 +1452,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         }
         changedBlocks.clear();
         placedBlocks.clear();
+        generatedBlockReservations.clear();
         for (UUID playerId : List.copyOf(invisiblePlayers)) {
             Player invisible = Bukkit.getPlayer(playerId);
             if (invisible != null) handleInvisibilityChange(invisible, false);

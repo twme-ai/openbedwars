@@ -158,9 +158,11 @@ The defaults reproduce the familiar half-second cooldown and Slowness IV after a
 
 Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired projectiles are registered to their arena and removed during reset. Placed TNT is primed immediately, attributed to its placer, and included in the same cleanup so it cannot explode after a forced stop.
 
-## Pop-up Towers
+## Generated utility blocks
 
-Before consuming a Compact Pop-up Tower, OpenBedWars validates all 116 planned wool and ladder positions. The complete structure must fit below the build limit, outside protected areas, and without replacing map-owned blocks. If any position fails, no animation starts, no blocks are placed, and the player keeps the item with a localized space warning. Blocks placed during the current match may be replaced and remain part of the normal arena rollback.
+Bridge Eggs place team wool only into empty, buildable positions. Existing map blocks, blocks placed during the current match, protected regions, and positions reserved by another generated structure remain unchanged while the rest of the bridge continues normally.
+
+Before consuming a Compact Pop-up Tower, OpenBedWars validates and reserves all 116 planned wool and ladder positions. The complete structure must fit below the build limit, outside protected areas, and without replacing any existing block. If any position fails, no animation starts, no blocks are placed, and the player keeps the item with a localized space warning. Accepted positions remain reserved until their animation step, preventing player placement, liquids, or another generated utility from creating a paid partial structure.
 
 ## Team-owned defenders
 

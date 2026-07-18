@@ -269,7 +269,8 @@ public final class SpecialItemService implements Listener {
                                 : ladder.clone()
                 ))
                 .toList();
-        if (placements.stream().anyMatch(placement -> !arena.canPlaceGeneratedBlock(placement.block()))) {
+        List<Block> blocks = placements.stream().map(Placement::block).toList();
+        if (!arena.reserveGeneratedBlocks(blocks)) {
             return false;
         }
 
@@ -277,12 +278,18 @@ public final class SpecialItemService implements Listener {
         BukkitTask[] task = new BukkitTask[1];
         task[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (arena.phase() != GamePhase.RUNNING || index[0] >= placements.size()) {
+                arena.releaseGeneratedBlocks(blocks.subList(index[0], blocks.size()));
                 task[0].cancel();
                 return;
             }
             for (int count = 0; count < 8 && index[0] < placements.size(); count++) {
-                Placement placement = placements.get(index[0]++);
-                arena.placeGeneratedBlock(placement.block(), placement.data());
+                Placement placement = placements.get(index[0]);
+                if (!arena.placeReservedGeneratedBlock(placement.block(), placement.data())) {
+                    arena.releaseGeneratedBlocks(blocks.subList(index[0], blocks.size()));
+                    task[0].cancel();
+                    return;
+                }
+                index[0]++;
             }
         }, 0L, 1L);
         return true;
