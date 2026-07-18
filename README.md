@@ -40,9 +40,10 @@ Implemented in the current development build:
 - Team upgrades, an ordered three-trap queue, heal pool, and Dragon Buff
 - Working Fireballs, Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers
 - Per-player MiniMessage locales, English and Traditional Chinese translations, and localized scoreboards
+- Asynchronous SQLite statistics for games, wins/losses, kills, final kills/deaths, beds, XP, and Bed Wars levels
 - Game block, liquid, container, entity, and inventory cleanup without replacing the arena world
 
-Still planned before the first stable release: in-game arena setup tools, persistent statistics and progression, reconnect handling, parties, broader automated event tests, and multi-client soak testing. Exact behavior sources and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
+Still planned before the first stable release: in-game arena setup tools, reconnect handling, parties, leaderboards, broader automated event tests, and multi-client soak testing. Exact behavior sources and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
 
 ## License
 

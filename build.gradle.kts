@@ -1,5 +1,6 @@
 plugins {
     java
+    id("com.gradleup.shadow") version "9.6.0"
 }
 
 group = "io.github.twmeai"
@@ -13,6 +14,9 @@ repositories {
 
 dependencies {
     compileOnly("io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT")
+    implementation("org.xerial:sqlite-jdbc:3.53.2.0") {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
 
     testImplementation(platform("org.junit:junit-bom:5.13.4"))
     testImplementation("org.junit.jupiter:junit-jupiter")
@@ -42,4 +46,17 @@ tasks.processResources {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+tasks.jar {
+    archiveClassifier = "unshaded"
+}
+
+tasks.shadowJar {
+    archiveClassifier = ""
+}
+
+tasks.build {
+    dependsOn(tasks.shadowJar)
 }

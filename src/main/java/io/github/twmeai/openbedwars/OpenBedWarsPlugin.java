@@ -7,6 +7,7 @@ import io.github.twmeai.openbedwars.message.MessageService;
 import io.github.twmeai.openbedwars.shop.ShopService;
 import io.github.twmeai.openbedwars.shop.UpgradeService;
 import io.github.twmeai.openbedwars.special.SpecialItemService;
+import io.github.twmeai.openbedwars.statistics.StatisticsService;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -18,12 +19,14 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
     private ShopService shopService;
     private UpgradeService upgradeService;
     private SpecialItemService specialItemService;
+    private StatisticsService statisticsService;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         saveResourceIfMissing("arenas.yml");
         messages = new MessageService(this);
+        statisticsService = new StatisticsService(this);
         arenaManager = new ArenaManager(this);
         shopService = new ShopService(this, arenaManager);
         upgradeService = new UpgradeService(this, arenaManager);
@@ -45,6 +48,9 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         if (specialItemService != null) {
             specialItemService.shutdown();
         }
+        if (statisticsService != null) {
+            statisticsService.close();
+        }
     }
 
     public MessageService messages() {
@@ -61,6 +67,10 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
 
     public UpgradeService upgradeService() {
         return upgradeService;
+    }
+
+    public StatisticsService statisticsService() {
+        return statisticsService;
     }
 
     private void saveResourceIfMissing(String path) {

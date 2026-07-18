@@ -5,6 +5,10 @@ countdown-seconds: 20
 respawn-seconds: 5
 ending-seconds: 10
 
+progression:
+  experience-per-minute: 25
+  win-bonus-experience: 100
+
 # Hypixel-style default event schedule. Values are elapsed game seconds.
 events:
   diamond-ii: 360

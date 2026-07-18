@@ -5,6 +5,8 @@ import io.github.twmeai.openbedwars.config.ArenaDefinition;
 import io.github.twmeai.openbedwars.config.GameSettings;
 import io.github.twmeai.openbedwars.config.Position;
 import io.github.twmeai.openbedwars.message.MessageService;
+import io.github.twmeai.openbedwars.statistics.PlayerIdentity;
+import io.github.twmeai.openbedwars.statistics.StatsDelta;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -66,6 +68,7 @@ public final class Arena {
     private int countdown;
     private int elapsedSeconds;
     private int endingCountdown;
+    private boolean statsRecorded;
 
     public Arena(
             OpenBedWarsPlugin plugin,
@@ -320,7 +323,7 @@ public final class Arena {
             return JoinResult.FULL;
         }
 
-        PlayerState state = new PlayerState(player.getUniqueId(), PlayerSnapshot.capture(player), team.color());
+        PlayerState state = new PlayerState(player.getUniqueId(), player.getName(), PlayerSnapshot.capture(player), team.color());
         players.put(player.getUniqueId(), state);
         team.addMember(player.getUniqueId());
         prepareWaitingPlayer(player);
@@ -337,10 +340,14 @@ public final class Arena {
     }
 
     public boolean leave(Player player, boolean notify) {
-        PlayerState state = players.remove(player.getUniqueId());
+        PlayerState state = players.get(player.getUniqueId());
         if (state == null) {
             return false;
         }
+        if (phase == GamePhase.RUNNING) {
+            recordStatistics(Map.of(state, false));
+        }
+        players.remove(player.getUniqueId());
         TeamState team = teams.get(state.team());
         team.removeMember(player.getUniqueId());
         lastHits.remove(player.getUniqueId());
@@ -390,7 +397,7 @@ public final class Arena {
             return;
         }
         broadcast("arena.stopped");
-        beginEnding(null);
+        beginEnding(null, false);
     }
 
     public void shutdown() {
@@ -445,6 +452,8 @@ public final class Arena {
         PlayerState killerState = killer == null ? null : players.get(killer.getUniqueId());
         lastHits.remove(victim.getUniqueId());
         boolean finalDeath = !victimTeam.bedAlive();
+        victimState.addDeath();
+        if (finalDeath) victimState.addFinalDeath();
         victimState.downgradeTools();
         victimState.respawning(!finalDeath);
         victimState.eliminated(finalDeath);
@@ -546,6 +555,7 @@ public final class Arena {
         }
         phase = GamePhase.RUNNING;
         elapsedSeconds = 0;
+        statsRecorded = false;
         generatorProgress.clear();
         trapCooldownUntil.clear();
         for (TeamState team : teams.values()) {
@@ -584,7 +594,7 @@ public final class Arena {
                 spawnDragons();
                 broadcast("arena.sudden-death");
             }
-            case GAME_END -> beginEnding(null);
+            case GAME_END -> beginEnding(null, true);
             default -> broadcast("arena.event", MessageService.text("event", type.displayName()));
         }
     }
@@ -788,13 +798,21 @@ public final class Arena {
         }
         List<TeamState> alive = teams.values().stream().filter(team -> team.isAlive(players)).toList();
         if (alive.size() <= 1) {
-            beginEnding(alive.isEmpty() ? null : alive.getFirst());
+            beginEnding(alive.isEmpty() ? null : alive.getFirst(), true);
         }
     }
 
-    private void beginEnding(TeamState winner) {
+    private void beginEnding(TeamState winner, boolean recordStatistics) {
         if (phase == GamePhase.ENDING) {
             return;
+        }
+        if (recordStatistics && !statsRecorded) {
+            Map<PlayerState, Boolean> results = new LinkedHashMap<>();
+            for (PlayerState state : players.values()) {
+                results.put(state, winner != null && state.team() == winner.color());
+            }
+            recordStatistics(results);
+            statsRecorded = true;
         }
         phase = GamePhase.ENDING;
         endingCountdown = settings.endingSeconds();
@@ -805,6 +823,27 @@ public final class Arena {
                     MessageService.text("team", winner.color().displayName()),
                     MessageService.teamColor("team_color", winner.color()));
         }
+    }
+
+    private void recordStatistics(Map<PlayerState, Boolean> results) {
+        long playExperience = (long) elapsedSeconds * settings.experiencePerMinute() / 60L;
+        Map<PlayerIdentity, StatsDelta> deltas = new LinkedHashMap<>();
+        for (Map.Entry<PlayerState, Boolean> entry : results.entrySet()) {
+            PlayerState state = entry.getKey();
+            boolean won = entry.getValue();
+            deltas.put(new PlayerIdentity(state.playerId(), state.playerName()), new StatsDelta(
+                    1,
+                    won ? 1 : 0,
+                    won ? 0 : 1,
+                    state.kills(),
+                    state.finalKills(),
+                    state.deaths(),
+                    state.finalDeaths(),
+                    state.bedsBroken(),
+                    playExperience + (won ? settings.winBonusExperience() : 0)
+            ));
+        }
+        plugin.statisticsService().record(deltas);
     }
 
     private void tickEnding() {
@@ -849,6 +888,7 @@ public final class Arena {
         elapsedSeconds = 0;
         countdown = 0;
         endingCountdown = 0;
+        statsRecorded = false;
         phase = GamePhase.WAITING;
     }
 

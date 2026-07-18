@@ -15,6 +15,9 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -139,14 +142,27 @@ public final class MessageService {
     }
 
     private void loadLocale(String locale, File file) {
-        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         Map<String, String> values = new HashMap<>();
+        try (InputStream resource = plugin.getResource("lang/" + locale + ".yml")) {
+            if (resource != null) {
+                YamlConfiguration bundled = YamlConfiguration.loadConfiguration(
+                        new InputStreamReader(resource, StandardCharsets.UTF_8));
+                collectStrings(bundled, values);
+            }
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("Could not load bundled locale " + locale, exception);
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        collectStrings(yaml, values);
+        translations.put(locale, Map.copyOf(values));
+    }
+
+    private void collectStrings(YamlConfiguration yaml, Map<String, String> values) {
         for (String key : yaml.getKeys(true)) {
             if (yaml.isString(key)) {
                 values.put(key, yaml.getString(key, ""));
             }
         }
-        translations.put(locale, Map.copyOf(values));
     }
 
     private String findLocale(String requested) {

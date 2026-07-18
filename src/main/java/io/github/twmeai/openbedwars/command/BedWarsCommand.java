@@ -44,6 +44,7 @@ public final class BedWarsCommand implements TabExecutor {
             case "join" -> join(sender, args);
             case "leave" -> leave(sender);
             case "language", "lang" -> language(sender, args);
+            case "stats" -> statistics(sender, args);
             case "start" -> start(sender, args);
             case "stop" -> stop(sender, args);
             case "reload" -> reload(sender);
@@ -121,6 +122,16 @@ public final class BedWarsCommand implements TabExecutor {
             return;
         }
         messages.send(player, "language.changed", MessageService.text("locale", messages.localeOf(player)));
+    }
+
+    private void statistics(CommandSender sender, String[] args) {
+        if (args.length >= 2) {
+            plugin.statisticsService().showByName(sender, args[1]);
+        } else if (sender instanceof Player player) {
+            plugin.statisticsService().showSelf(sender, player);
+        } else {
+            messages.send(sender, "error.player-only");
+        }
     }
 
     private void start(CommandSender sender, String[] args) {
@@ -216,7 +227,7 @@ public final class BedWarsCommand implements TabExecutor {
             @NotNull String[] args
     ) {
         if (args.length == 1) {
-            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "language", "shop", "upgrades"));
+            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "stats", "language", "shop", "upgrades"));
             if (sender.hasPermission("openbedwars.admin")) {
                 commands.addAll(List.of("start", "stop", "reload"));
             }
@@ -227,6 +238,9 @@ public final class BedWarsCommand implements TabExecutor {
         }
         if (args.length == 2 && List.of("language", "lang").contains(args[0].toLowerCase(Locale.ROOT))) {
             return matches(messages.availableLocales(), args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("stats")) {
+            return matches(org.bukkit.Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
         }
         return List.of();
     }
