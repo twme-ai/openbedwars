@@ -86,7 +86,8 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     private final Map<BlockKey, BlockState> changedBlocks = new LinkedHashMap<>();
     private final Set<BlockKey> placedBlocks = new HashSet<>();
     private final List<Entity> spawnedEntities = new ArrayList<>();
-    private final Set<BukkitTask> respawnTasks = new HashSet<>();
+    private final RespawnCountdownTracker<BukkitTask> respawnCountdowns =
+            new RespawnCountdownTracker<>(BukkitTask::cancel);
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
@@ -577,7 +578,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         respawnProtection.remove(player.getUniqueId());
         fireballCooldowns.remove(player.getUniqueId());
         lastHits.entrySet().removeIf(entry -> entry.getValue().attacker().equals(player.getUniqueId()));
-        cancelRespawnTasksFor(player.getUniqueId());
+        respawnCountdowns.remove(player.getUniqueId());
         playerRelease.accept(player.getUniqueId(), state.snapshot());
         scoreboards.remove(player);
         state.snapshot().restore(player);
@@ -604,6 +605,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
             return leave(player, false);
         }
         state.disconnected(true);
+        respawnCountdowns.pause(player.getUniqueId());
         enemyBaseEntries.remove(player.getUniqueId());
         cancelDisconnectTask(player.getUniqueId());
         broadcast("arena.player-disconnected",
@@ -629,10 +631,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
                 plugin.spectatorService().prepare(player, this);
                 player.teleportAsync(definition.spectator().toLocation(world));
             } else if (state.respawning()) {
-                state.respawning(false);
-                kits.prepareForGame(player, state, team);
-                player.teleportAsync(team.definition().spawn().toLocation(world));
-                plugin.spectatorService().syncActiveViewer(player, this);
+                resumeRespawnCountdown(player, state);
             } else {
                 player.setGameMode(GameMode.SURVIVAL);
                 player.setAllowFlight(false);
@@ -1215,44 +1214,55 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     }
 
     private void beginRespawnCountdown(Player player, PlayerState state) {
+        respawnCountdowns.begin(player.getUniqueId(), System.nanoTime(), settings.respawnSeconds());
+        resumeRespawnCountdown(player, state);
+    }
+
+    private void resumeRespawnCountdown(Player player, PlayerState state) {
+        UUID playerId = player.getUniqueId();
+        if (!respawnCountdowns.contains(playerId)) {
+            respawnCountdowns.begin(playerId, System.nanoTime(), settings.respawnSeconds());
+        }
         player.getInventory().clear();
         player.setGameMode(GameMode.SPECTATOR);
         player.teleportAsync(teams.get(state.team()).definition().spawn().toLocation(world));
-        final int[] remaining = {settings.respawnSeconds()};
+        final int[] lastShown = {-1};
         BukkitTask[] holder = new BukkitTask[1];
         holder[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            if (phase != GamePhase.RUNNING || players.get(player.getUniqueId()) != state || !player.isOnline()) {
+            if (!respawnCountdowns.isCurrentTask(playerId, holder[0])) {
                 holder[0].cancel();
-                respawnTasks.remove(holder[0]);
                 return;
             }
-            if (remaining[0] <= 0) {
+            if (phase != GamePhase.RUNNING || players.get(playerId) != state) {
+                respawnCountdowns.remove(playerId);
+                return;
+            }
+            if (!player.isOnline()) {
+                respawnCountdowns.pause(playerId);
+                return;
+            }
+            int remaining = respawnCountdowns.remainingSeconds(playerId, System.nanoTime()).orElse(0);
+            if (remaining <= 0) {
                 state.respawning(false);
+                respawnCountdowns.remove(playerId);
                 kits.prepareForGame(player, state, teams.get(state.team()));
                 respawnProtection.grant(player.getUniqueId(), System.nanoTime(),
                         settings.respawnProtectionSeconds());
                 syncInvisibilityFor(player);
+                plugin.spectatorService().syncActiveViewer(player, this);
                 player.teleportAsync(teams.get(state.team()).definition().spawn().toLocation(world));
                 player.showTitle(Title.title(messages.render(player, "respawn.done"), net.kyori.adventure.text.Component.empty(),
                         Title.Times.times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(250))));
-                holder[0].cancel();
-                respawnTasks.remove(holder[0]);
                 return;
             }
+            if (lastShown[0] == remaining) return;
             player.showTitle(Title.title(
                     messages.render(player, "respawn.title"),
-                    messages.render(player, "respawn.subtitle", MessageService.number("seconds", remaining[0])),
+                    messages.render(player, "respawn.subtitle", MessageService.number("seconds", remaining)),
                     Title.Times.times(Duration.ZERO, Duration.ofMillis(1100), Duration.ZERO)));
-            remaining[0]--;
-        }, 0L, 20L);
-        respawnTasks.add(holder[0]);
-    }
-
-    private void cancelRespawnTasksFor(UUID playerId) {
-        PlayerState state = players.get(playerId);
-        if (state != null) {
-            state.respawning(false);
-        }
+            lastShown[0] = remaining;
+        }, 0L, 1L);
+        respawnCountdowns.attach(playerId, holder[0]);
     }
 
     private void expireDisconnect(PlayerState state) {
@@ -1262,6 +1272,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         players.remove(state.playerId());
         teams.get(state.team()).removeMember(state.playerId());
         state.eliminated(true);
+        respawnCountdowns.remove(state.playerId());
         enemyBaseEntries.remove(state.playerId());
         respawnProtection.remove(state.playerId());
         fireballCooldowns.remove(state.playerId());
@@ -1355,10 +1366,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
             world.setGameRule(GameRules.IMMEDIATE_RESPAWN, previousImmediateRespawn);
             previousImmediateRespawn = null;
         }
-        for (BukkitTask task : List.copyOf(respawnTasks)) {
-            task.cancel();
-        }
-        respawnTasks.clear();
+        respawnCountdowns.clear();
         for (BukkitTask task : disconnectTasks.values()) {
             task.cancel();
         }

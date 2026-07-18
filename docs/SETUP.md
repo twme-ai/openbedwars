@@ -134,6 +134,8 @@ respawn-protection-seconds: 3
 
 After the respawn countdown, a player ignores non-void damage for the configured protection time. Hitting an enemy immediately removes the attacker's protection, while void damage always remains lethal. Set `respawn-protection-seconds` to `0` to disable the window. Protection is removed on death, arena leave, reconnect expiry, and match reset.
 
+Disconnecting during the countdown does not bypass it. The original monotonic deadline continues while the player is offline; reconnecting within the grace period resumes only the remaining countdown, then grants the same starter kit and protection as an uninterrupted respawn. If the deadline elapsed while offline, respawn completes on the next server tick after reconnecting.
+
 ## Final eliminations
 
 Once a team's bed is destroyed, each subsequent death is marked as a final kill and permanently moves that player to observer mode. In multi-player teams, eliminating one member does not eliminate the team while another active member remains. The final member's elimination produces one localized team-elimination announcement before victory is evaluated.
