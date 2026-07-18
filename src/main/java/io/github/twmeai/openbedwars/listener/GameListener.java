@@ -129,8 +129,9 @@ public final class GameListener implements Listener {
         event.setDroppedExp(0);
         event.setKeepLevel(true);
         event.deathMessage(null);
-        arena.dropDeathResources(victim.getLocation(), resources);
-        arena.handleDeath(victim, arena.creditedKiller(victim));
+        Player killer = arena.creditedKiller(victim);
+        arena.handleDeathResources(victim, killer, resources);
+        arena.handleDeath(victim, killer);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

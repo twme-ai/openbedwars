@@ -1,6 +1,7 @@
 package io.github.twmeai.openbedwars.game;
 
 import org.junit.jupiter.api.Test;
+import org.bukkit.Material;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -20,5 +21,14 @@ class PlayerProgressionTest {
         assertEquals("gold", ResourceType.GOLD.displayName(2));
         assertEquals("diamonds", ResourceType.DIAMOND.displayName(2));
         assertEquals("emerald", ResourceType.EMERALD.displayName(1));
+    }
+
+    @Test
+    void generatorMaterialsMapToResourceTypes() {
+        assertEquals(ResourceType.IRON, ResourceType.fromMaterial(Material.IRON_INGOT).orElseThrow());
+        assertEquals(ResourceType.GOLD, ResourceType.fromMaterial(Material.GOLD_INGOT).orElseThrow());
+        assertEquals(ResourceType.DIAMOND, ResourceType.fromMaterial(Material.DIAMOND).orElseThrow());
+        assertEquals(ResourceType.EMERALD, ResourceType.fromMaterial(Material.EMERALD).orElseThrow());
+        assertEquals(java.util.Optional.empty(), ResourceType.fromMaterial(Material.WHITE_WOOL));
     }
 }

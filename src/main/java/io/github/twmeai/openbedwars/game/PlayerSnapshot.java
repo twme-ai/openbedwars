@@ -16,6 +16,7 @@ public final class PlayerSnapshot {
     private final ItemStack[] storage;
     private final ItemStack[] armor;
     private final ItemStack offHand;
+    private final ItemStack[] enderChest;
     private final int level;
     private final float experience;
     private final int food;
@@ -32,6 +33,7 @@ public final class PlayerSnapshot {
         storage = cloneItems(player.getInventory().getStorageContents());
         armor = cloneItems(player.getInventory().getArmorContents());
         offHand = cloneItem(player.getInventory().getItemInOffHand());
+        enderChest = cloneItems(player.getEnderChest().getContents());
         level = player.getLevel();
         experience = player.getExp();
         food = player.getFoodLevel();
@@ -52,6 +54,8 @@ public final class PlayerSnapshot {
         player.getInventory().setStorageContents(cloneItems(storage));
         player.getInventory().setArmorContents(cloneItems(armor));
         player.getInventory().setItemInOffHand(cloneItem(offHand));
+        player.getEnderChest().clear();
+        player.getEnderChest().setContents(cloneItems(enderChest));
         player.setLevel(level);
         player.setExp(experience);
         player.setFoodLevel(food);

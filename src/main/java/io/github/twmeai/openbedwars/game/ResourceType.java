@@ -1,8 +1,11 @@
 package io.github.twmeai.openbedwars.game;
 
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
 import org.bukkit.Material;
 
 import java.util.Locale;
+import java.util.Optional;
 
 public enum ResourceType {
     IRON(Material.IRON_INGOT),
@@ -18,6 +21,26 @@ public enum ResourceType {
 
     public Material material() {
         return material;
+    }
+
+    public String translationKey() {
+        return "resource." + name().toLowerCase(Locale.ROOT);
+    }
+
+    public TextColor textColor() {
+        return switch (this) {
+            case IRON -> NamedTextColor.WHITE;
+            case GOLD -> NamedTextColor.GOLD;
+            case DIAMOND -> NamedTextColor.AQUA;
+            case EMERALD -> NamedTextColor.GREEN;
+        };
+    }
+
+    public static Optional<ResourceType> fromMaterial(Material material) {
+        for (ResourceType type : values()) {
+            if (type.material == material) return Optional.of(type);
+        }
+        return Optional.empty();
     }
 
     public String displayName(int amount) {

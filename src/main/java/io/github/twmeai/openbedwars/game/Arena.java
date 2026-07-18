@@ -226,11 +226,34 @@ public final class Arena {
         return true;
     }
 
-    public void dropDeathResources(Location location, List<ItemStack> resources) {
+    public void handleDeathResources(Player victim, Player killer, List<ItemStack> resources) {
+        PlayerState victimState = players.get(victim.getUniqueId());
+        PlayerState killerState = killer == null ? null : players.get(killer.getUniqueId());
+        boolean rewardKiller = victimState != null
+                && killerState != null
+                && killerState.team() != victimState.team()
+                && !killerState.eliminated()
+                && !killerState.respawning();
+        if (!rewardKiller) {
+            resources.forEach(resource -> dropTrackedItem(victim.getLocation(), resource));
+            return;
+        }
+
+        EnumMap<ResourceType, Integer> totals = new EnumMap<>(ResourceType.class);
         for (ItemStack resource : resources) {
-            Item dropped = world.dropItemNaturally(location, resource);
-            dropped.setPickupDelay(10);
-            trackEntity(dropped);
+            ResourceType type = ResourceType.fromMaterial(resource.getType()).orElse(null);
+            if (type == null) continue;
+            totals.merge(type, resource.getAmount(), Integer::sum);
+            killer.getInventory().addItem(resource.clone()).values()
+                    .forEach(leftover -> dropTrackedItem(killer.getLocation(), leftover));
+        }
+        for (ResourceType type : ResourceType.values()) {
+            int amount = totals.getOrDefault(type, 0);
+            if (amount <= 0) continue;
+            messages.send(killer, "death.resource-loot",
+                    MessageService.number("amount", amount),
+                    MessageService.component("resource", messages.render(killer, type.translationKey())),
+                    MessageService.color("resource_color", type.textColor()));
         }
     }
 
@@ -577,6 +600,9 @@ public final class Arena {
         PlayerState killerState = killer == null ? null : players.get(killer.getUniqueId());
         lastHits.remove(victim.getUniqueId());
         boolean finalDeath = !victimTeam.bedAlive();
+        if (finalDeath) {
+            dropFinalEnderChest(victim, victimTeam);
+        }
         victimState.addDeath();
         if (finalDeath) victimState.addFinalDeath();
         victimState.downgradeTools();
@@ -1055,11 +1081,31 @@ public final class Arena {
 
     private void prepareWaitingPlayer(Player player) {
         player.getInventory().clear();
+        player.getEnderChest().clear();
         player.setGameMode(GameMode.ADVENTURE);
         player.setAllowFlight(false);
         player.setHealth(player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue());
         player.setFoodLevel(20);
         player.teleportAsync(definition.lobby().toLocation(world));
+    }
+
+    private void dropFinalEnderChest(Player victim, TeamState team) {
+        List<ItemStack> contents = java.util.Arrays.stream(victim.getEnderChest().getContents())
+                .filter(java.util.Objects::nonNull)
+                .filter(item -> !item.isEmpty())
+                .map(ItemStack::clone)
+                .toList();
+        victim.getEnderChest().clear();
+        if (contents.isEmpty()) return;
+        Location forge = team.definition().forge().toLocation(world).add(0, 0.25, 0);
+        contents.forEach(item -> dropTrackedItem(forge, item));
+        messages.send(victim, "death.ender-chest-dropped");
+    }
+
+    private void dropTrackedItem(Location location, ItemStack stack) {
+        Item dropped = world.dropItemNaturally(location, stack.clone());
+        dropped.setPickupDelay(10);
+        trackEntity(dropped);
     }
 
     private void broadcast(String key, net.kyori.adventure.text.minimessage.tag.resolver.TagResolver... resolvers) {
