@@ -62,6 +62,8 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public final class Arena {
+    private static final String DRAGON_TAG = "openbedwars_dragon";
+    private static final String DRAGON_TEAM_TAG_PREFIX = "openbedwars_owned_dragon_";
     private static final DamageType VOID_DAMAGE_TYPE = RegistryAccess.registryAccess()
             .getRegistry(RegistryKey.DAMAGE_TYPE)
             .getOrThrow(DamageTypeKeys.OUT_OF_WORLD);
@@ -87,6 +89,7 @@ public final class Arena {
     private final Map<String, Long> trapCooldownUntil = new HashMap<>();
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
+    private final Map<UUID, TeamColor> dragonTeams = new HashMap<>();
     private final RespawnProtectionTracker respawnProtection = new RespawnProtectionTracker();
     private final PlayerCooldownTracker fireballCooldowns = new PlayerCooldownTracker();
     private final Set<UUID> invisiblePlayers = new HashSet<>();
@@ -249,6 +252,22 @@ public final class Arena {
 
     public void trackEntity(Entity entity) {
         spawnedEntities.add(entity);
+    }
+
+    public void trackTransientEntity(Entity entity) {
+        entity.setPersistent(false);
+        trackEntity(entity);
+    }
+
+    public boolean isArenaDragon(Entity entity) {
+        return dragonTeams.containsKey(entity.getUniqueId());
+    }
+
+    public boolean isFriendlyDragonDamage(Entity damager, Player victim) {
+        TeamColor owner = dragonTeamOf(damager);
+        PlayerState victimState = players.get(victim.getUniqueId());
+        return owner != null && victimState != null
+                && DragonTargetPolicy.isFriendly(owner, victimState.team());
     }
 
     public void captureState(Block block) {
@@ -829,6 +848,7 @@ public final class Arena {
     private void tickRunning() {
         elapsedSeconds++;
         settings.eventSchedule().eventAt(elapsedSeconds).ifPresent(event -> handleEvent(event.type()));
+        tickDragons();
         tickGenerators();
         tickHealPools();
         scoreboards.update(this);
@@ -1073,26 +1093,67 @@ public final class Arena {
     }
 
     private void spawnDragons() {
-        int dragonCount = teams.values().stream()
-                .filter(team -> team.isAlive(players))
-                .mapToInt(team -> team.dragonBuff() ? 2 : 1)
-                .sum();
-        for (int index = 0; index < dragonCount; index++) {
-            Location location = definition.spectator().toLocation(world).add(0, 15 + index * 3, 0);
-            EnderDragon dragon = world.spawn(location, EnderDragon.class, entity -> {
-                entity.customName(net.kyori.adventure.text.Component.text("Bed Wars Dragon"));
-                entity.setRemoveWhenFarAway(false);
-            });
-            spawnedEntities.add(dragon);
+        int spawnIndex = 0;
+        for (TeamState team : teams.values()) {
+            if (!team.isAlive(players)) continue;
+            int count = team.dragonBuff() ? 2 : 1;
+            for (int index = 0; index < count; index++) {
+                Location location = definition.spectator().toLocation(world).add(0, 15 + spawnIndex++ * 3, 0);
+                EnderDragon dragon = world.spawn(location, EnderDragon.class, entity -> {
+                    entity.setPhase(EnderDragon.Phase.CIRCLING);
+                    entity.setRemoveWhenFarAway(false);
+                    entity.addScoreboardTag(DRAGON_TAG);
+                    entity.addScoreboardTag(DRAGON_TEAM_TAG_PREFIX + team.color().key());
+                });
+                dragonTeams.put(dragon.getUniqueId(), team.color());
+                trackTransientEntity(dragon);
+            }
         }
+        tickDragons();
+    }
+
+    private void tickDragons() {
+        dragonTeams.entrySet().removeIf(entry -> {
+            Entity entity = world.getEntity(entry.getKey());
+            if (!(entity instanceof EnderDragon dragon) || !dragon.isValid()) return true;
+            Player target = dragonTarget(dragon, entry.getValue());
+            dragon.setTarget(target);
+            return false;
+        });
+    }
+
+    private Player dragonTarget(EnderDragon dragon, TeamColor owner) {
+        List<DragonTargetPolicy.Candidate> candidates = new ArrayList<>();
+        for (PlayerState state : players.values()) {
+            Player player = Bukkit.getPlayer(state.playerId());
+            if (player == null || !player.getWorld().equals(world)) continue;
+            candidates.add(new DragonTargetPolicy.Candidate(
+                    state.playerId(), state.team(), isActive(state),
+                    dragon.getLocation().distanceSquared(player.getLocation())
+            ));
+        }
+        return DragonTargetPolicy.nearestEnemy(owner, candidates)
+                .map(Bukkit::getPlayer)
+                .orElse(null);
+    }
+
+    private TeamColor dragonTeamOf(Entity damager) {
+        if (damager instanceof EnderDragon dragon) {
+            return dragonTeams.get(dragon.getUniqueId());
+        }
+        if (damager instanceof org.bukkit.entity.Projectile projectile
+                && projectile.getShooter() instanceof EnderDragon dragon) {
+            return dragonTeams.get(dragon.getUniqueId());
+        }
+        return null;
     }
 
     private void spawnShopkeepers() {
         NamespacedKey shopType = new NamespacedKey(plugin, "shop_type");
         for (TeamState team : teams.values()) {
             if (team.members().isEmpty()) continue;
-            spawnedEntities.add(spawnShopkeeper(team.definition().itemShop(), "ITEM SHOP", "item", shopType));
-            spawnedEntities.add(spawnShopkeeper(team.definition().upgradeShop(), "TEAM UPGRADES", "upgrades", shopType));
+            trackEntity(spawnShopkeeper(team.definition().itemShop(), "ITEM SHOP", "item", shopType));
+            trackEntity(spawnShopkeeper(team.definition().upgradeShop(), "TEAM UPGRADES", "upgrades", shopType));
         }
     }
 
@@ -1249,12 +1310,17 @@ public final class Arena {
             task.cancel();
         }
         disconnectTasks.clear();
+        world.getEntities().stream()
+                .filter(entity -> entity.getScoreboardTags().contains(DRAGON_TAG))
+                .toList()
+                .forEach(Entity::remove);
         for (Entity entity : List.copyOf(spawnedEntities)) {
             if (entity.isValid()) {
                 entity.remove();
             }
         }
         spawnedEntities.clear();
+        dragonTeams.clear();
         for (BlockState state : changedBlocks.values()) {
             state.update(true, false);
         }

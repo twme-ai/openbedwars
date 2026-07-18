@@ -5,6 +5,7 @@ import io.github.twmeai.openbedwars.game.Arena;
 import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.game.GamePhase;
 import org.bukkit.Material;
+import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TNTPrimed;
@@ -96,7 +97,7 @@ public final class GameListener implements Listener {
                         event.getBlockPlaced().getLocation().add(0.5, 0, 0.5), TNTPrimed.class);
                 tnt.setFuseTicks(40);
                 tnt.setSource(event.getPlayer());
-                arena.trackEntity(tnt);
+                arena.trackTransientEntity(tnt);
             }
         });
     }
@@ -104,7 +105,11 @@ public final class GameListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onProjectileLaunch(ProjectileLaunchEvent event) {
         if (event.getEntity().getShooter() instanceof Player player) {
-            arenas.arenaOf(player).ifPresent(arena -> arena.trackEntity(event.getEntity()));
+            arenas.arenaOf(player).ifPresent(arena -> arena.trackTransientEntity(event.getEntity()));
+        } else if (event.getEntity().getShooter() instanceof EnderDragon dragon) {
+            arenas.arenaIn(dragon.getWorld())
+                    .filter(arena -> arena.isArenaDragon(dragon))
+                    .ifPresent(arena -> arena.trackTransientEntity(event.getEntity()));
         }
     }
 
@@ -161,9 +166,14 @@ public final class GameListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
+        Arena victimArena = arenas.arenaOf(victim).orElse(null);
+        if (victimArena != null && victimArena.isFriendlyDragonDamage(event.getDamager(), victim)) {
+            event.setCancelled(true);
+            return;
+        }
         Player attacker = attackingPlayer(event.getDamager());
         if (attacker == null || attacker.equals(victim)) return;
-        Arena arena = arenas.arenaOf(victim).orElse(null);
+        Arena arena = victimArena;
         Arena attackerArena = arenas.arenaOf(attacker).orElse(null);
         if (arena == null) {
             if (attackerArena != null) event.setCancelled(true);

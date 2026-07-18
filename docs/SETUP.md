@@ -118,6 +118,12 @@ The defaults reproduce the familiar half-second cooldown and Slowness IV after a
 
 Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired projectiles are registered to their arena and removed during reset. Placed TNT is primed immediately, attributed to its placer, and included in the same cleanup so it cannot explode after a forced stop.
 
+## Sudden Death
+
+The `events.sudden-death` time releases one dragon for every team that has not been eliminated. A team that purchased Dragon Buff releases two. Each dragon belongs to that team, continually selects the nearest active enemy, and cannot damage its own players directly or through a dragon fireball.
+
+Sudden Death dragons and their projectiles are non-persistent. Reset removes all loaded tagged dragons in addition to the normal tracked-entity cleanup, so a forced stop or chunk unload cannot leave a Sudden Death entity in the arena world.
+
 ## Invisibility
 
 The item-shop invisibility potion keeps the player's real armor equipped while hiding all four armor slots from active enemies. The player, teammates, and spectators continue to receive the real equipment, so armor protection and permanent upgrades remain unchanged. Held items and potion or movement particles are still visible.
