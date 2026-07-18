@@ -31,6 +31,10 @@ import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.EnumSet;
@@ -179,6 +183,33 @@ public final class GameListener implements Listener {
         } else {
             arenas.arenaOf(event.getPlayer()).ifPresent(arena -> arena.trackEntity(event.getItemDrop()));
         }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player) || arenas.arenaOf(player).isEmpty()) return;
+        if (event.getSlotType() == InventoryType.SlotType.ARMOR) {
+            event.setCancelled(true);
+            return;
+        }
+        ItemStack moving = event.isShiftClick() ? event.getCurrentItem() : event.getCursor();
+        if (moving == null || !PERSISTENT_ITEMS.contains(moving.getType())) return;
+        boolean clickedOutsidePlayerInventory = event.getClickedInventory() != event.getView().getBottomInventory();
+        if (clickedOutsidePlayerInventory || event.isShiftClick()) event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInventoryDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player) || arenas.arenaOf(player).isEmpty()) return;
+        if (event.getRawSlots().stream()
+                .anyMatch(slot -> event.getView().getSlotType(slot) == InventoryType.SlotType.ARMOR)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onItemDamage(PlayerItemDamageEvent event) {
+        if (arenas.arenaOf(event.getPlayer()).isPresent()) event.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

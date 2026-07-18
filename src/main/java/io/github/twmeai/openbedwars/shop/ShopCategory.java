@@ -3,6 +3,7 @@ package io.github.twmeai.openbedwars.shop;
 import org.bukkit.Material;
 
 public enum ShopCategory {
+    QUICK_BUY("Quick Buy", Material.NETHER_STAR),
     BLOCKS("Blocks", Material.WHITE_WOOL),
     MELEE("Melee", Material.GOLDEN_SWORD),
     ARMOR("Armor", Material.CHAINMAIL_BOOTS),

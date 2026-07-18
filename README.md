@@ -38,7 +38,7 @@ Implemented in the current development build:
 - Isolated arenas with waiting, countdown, running, sudden-death, ending, and reset phases
 - Automatic team balancing, beds, respawning, final kills, victory detection, and combat attribution
 - Iron, gold, diamond, and emerald generators with timed tiers and forge upgrades
-- Hypixel-style item shop categories, permanent armor and shears, tiered tools, potions, and utilities
+- Hypixel-style Quick Buy and item shop categories, permanent armor and shears, tiered tools, potions, and utilities
 - Team upgrades, an ordered three-trap queue, heal pool, and Dragon Buff
 - Working Fireballs, Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers
 - Per-player MiniMessage locales, English and Traditional Chinese translations, and localized scoreboards

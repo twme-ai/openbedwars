@@ -53,6 +53,25 @@ public final class ShopService implements Listener {
             Material.WOODEN_PICKAXE, Material.IRON_PICKAXE, Material.GOLDEN_PICKAXE, Material.DIAMOND_PICKAXE);
     private static final Set<Material> AXES = EnumSet.of(
             Material.WOODEN_AXE, Material.STONE_AXE, Material.IRON_AXE, Material.DIAMOND_AXE);
+    private static final Set<ShopItem> QUICK_BUY = EnumSet.of(
+            ShopItem.WOOL,
+            ShopItem.STONE_SWORD,
+            ShopItem.IRON_SWORD,
+            ShopItem.CHAINMAIL_ARMOR,
+            ShopItem.IRON_ARMOR,
+            ShopItem.PICKAXE,
+            ShopItem.AXE,
+            ShopItem.SHEARS,
+            ShopItem.BOW,
+            ShopItem.ARROWS,
+            ShopItem.GOLDEN_APPLE,
+            ShopItem.TNT,
+            ShopItem.FIREBALL,
+            ShopItem.ENDER_PEARL,
+            ShopItem.WATER_BUCKET,
+            ShopItem.BRIDGE_EGG,
+            ShopItem.POPUP_TOWER
+    );
 
     private final OpenBedWarsPlugin plugin;
     private final ArenaManager arenas;
@@ -74,7 +93,7 @@ public final class ShopService implements Listener {
             messages.send(player, "error.shop-game-only");
             return false;
         }
-        openCategory(player, arena, ShopCategory.BLOCKS);
+        openCategory(player, arena, ShopCategory.QUICK_BUY);
         return true;
     }
 
@@ -112,7 +131,10 @@ public final class ShopService implements Listener {
         PlayerState state = arena.playerState(player.getUniqueId()).orElseThrow();
         TeamState team = arena.teamOf(player.getUniqueId()).orElseThrow();
         for (ShopItem item : ShopItem.values()) {
-            if (item.category() != holder.category() || itemIndex >= ITEM_SLOTS.length) {
+            boolean visible = holder.category() == ShopCategory.QUICK_BUY
+                    ? QUICK_BUY.contains(item)
+                    : item.category() == holder.category();
+            if (!visible || itemIndex >= ITEM_SLOTS.length) {
                 continue;
             }
             int slot = ITEM_SLOTS[itemIndex++];
@@ -238,6 +260,9 @@ public final class ShopService implements Listener {
             default -> item.icon();
         };
         ItemStack stack = new ItemStack(material, item.amount());
+        if (material.getMaxDurability() > 0) {
+            makeUnbreakable(stack);
+        }
         switch (item.action()) {
             case SWORD -> makeUnbreakable(stack);
             case KNOCKBACK_STICK -> stack.addUnsafeEnchantment(Enchantment.KNOCKBACK, 1);

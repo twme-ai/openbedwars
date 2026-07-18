@@ -4,6 +4,7 @@ import io.github.twmeai.openbedwars.OpenBedWarsPlugin;
 import io.github.twmeai.openbedwars.game.Arena;
 import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.game.GamePhase;
+import io.github.twmeai.openbedwars.game.TeamColor;
 import io.github.twmeai.openbedwars.message.MessageService;
 import io.github.twmeai.openbedwars.statistics.LeaderboardMetric;
 import org.bukkit.command.Command;
@@ -44,6 +45,7 @@ public final class BedWarsCommand implements TabExecutor {
             case "list" -> list(sender);
             case "join" -> join(sender, args);
             case "leave" -> leave(sender);
+            case "team" -> team(sender, args);
             case "language", "lang" -> language(sender, args);
             case "stats" -> statistics(sender, args);
             case "leaderboard", "top" -> leaderboard(sender, args);
@@ -91,7 +93,9 @@ public final class BedWarsCommand implements TabExecutor {
             messages.send(player, "error.unknown-command");
             return;
         }
-        Arena arena = arenas.arena(args[1]).orElse(null);
+        Arena arena = args[1].equalsIgnoreCase("random")
+                ? arenas.bestAvailableArena().orElse(null)
+                : arenas.arena(args[1]).orElse(null);
         if (arena == null) {
             messages.send(player, "error.arena-not-found", MessageService.text("arena", args[1]));
             return;
@@ -103,6 +107,25 @@ public final class BedWarsCommand implements TabExecutor {
         Player player = requirePlayer(sender);
         if (player != null && !arenas.leave(player, true)) {
             messages.send(player, "error.not-in-arena");
+        }
+    }
+
+    private void team(CommandSender sender, String[] args) {
+        Player player = requirePlayer(sender);
+        if (player == null) return;
+        TeamColor color = args.length >= 2 ? TeamColor.fromKey(args[1]).orElse(null) : null;
+        if (color == null) {
+            messages.send(player, "error.invalid-team");
+            return;
+        }
+        Arena.TeamChangeResult result = arenas.changeTeam(player, color);
+        switch (result) {
+            case SUCCESS -> messages.send(player, "arena.team-selected",
+                    MessageService.text("team", color.displayName()),
+                    MessageService.teamColor("team_color", color));
+            case FULL -> messages.send(player, "arena.team-full");
+            case INVALID -> messages.send(player, "error.not-in-arena");
+            case LOCKED -> messages.send(player, "arena.team-locked");
         }
     }
 
@@ -251,14 +274,19 @@ public final class BedWarsCommand implements TabExecutor {
             @NotNull String[] args
     ) {
         if (args.length == 1) {
-            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "stats", "leaderboard", "language", "party", "shop", "upgrades"));
+            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "team", "stats", "leaderboard", "language", "party", "shop", "upgrades"));
             if (sender.hasPermission("openbedwars.admin")) {
                 commands.addAll(List.of("start", "stop", "reload", "setup"));
             }
             return matches(commands, args[0]);
         }
         if (args.length == 2 && List.of("join", "start", "stop").contains(args[0].toLowerCase(Locale.ROOT))) {
-            return matches(arenas.arenas().keySet(), args[1]);
+            List<String> values = new ArrayList<>(arenas.arenas().keySet());
+            if (args[0].equalsIgnoreCase("join")) values.add("random");
+            return matches(values, args[1]);
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("team")) {
+            return matches(java.util.Arrays.stream(TeamColor.values()).map(TeamColor::key).toList(), args[1]);
         }
         if (args.length == 2 && List.of("language", "lang").contains(args[0].toLowerCase(Locale.ROOT))) {
             return matches(messages.availableLocales(), args[1]);

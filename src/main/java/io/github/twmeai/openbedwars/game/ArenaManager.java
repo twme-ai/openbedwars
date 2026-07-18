@@ -37,6 +37,13 @@ public final class ArenaManager {
         return Optional.ofNullable(arenas.get(key.toLowerCase(java.util.Locale.ROOT)));
     }
 
+    public Optional<Arena> bestAvailableArena() {
+        return arenas.values().stream()
+                .filter(arena -> (arena.phase() == GamePhase.WAITING || arena.phase() == GamePhase.STARTING)
+                        && arena.playerCount() < arena.maxPlayers())
+                .max(java.util.Comparator.comparingInt(Arena::playerCount));
+    }
+
     public Optional<Arena> arenaOf(Player player) {
         return Optional.ofNullable(playerArenas.get(player.getUniqueId()));
     }
@@ -94,6 +101,11 @@ public final class ArenaManager {
     public boolean leave(Player player, boolean notify) {
         Arena arena = playerArenas.get(player.getUniqueId());
         return arena != null && arena.leave(player, notify);
+    }
+
+    public Arena.TeamChangeResult changeTeam(Player player, TeamColor team) {
+        Arena arena = playerArenas.get(player.getUniqueId());
+        return arena == null ? Arena.TeamChangeResult.INVALID : arena.changeTeam(player, team);
     }
 
     public boolean disconnect(Player player) {

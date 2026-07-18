@@ -111,6 +111,19 @@ public final class Arena {
         return state == null ? Optional.empty() : Optional.ofNullable(teams.get(state.team()));
     }
 
+    public TeamChangeResult changeTeam(Player player, TeamColor target) {
+        if (phase != GamePhase.WAITING && phase != GamePhase.STARTING) return TeamChangeResult.LOCKED;
+        PlayerState state = players.get(player.getUniqueId());
+        TeamState newTeam = teams.get(target);
+        if (state == null || newTeam == null) return TeamChangeResult.INVALID;
+        if (state.team() == target) return TeamChangeResult.SUCCESS;
+        if (newTeam.size() >= definition.playersPerTeam()) return TeamChangeResult.FULL;
+        teams.get(state.team()).removeMember(player.getUniqueId());
+        newTeam.addMember(player.getUniqueId());
+        state.team(target);
+        return TeamChangeResult.SUCCESS;
+    }
+
     public void refreshPersistentEquipment(Player player) {
         PlayerState state = players.get(player.getUniqueId());
         if (state != null) {
@@ -1030,6 +1043,13 @@ public final class Arena {
         PROTECTED,
         OWN_BED,
         BED_DESTROYED
+    }
+
+    public enum TeamChangeResult {
+        SUCCESS,
+        FULL,
+        INVALID,
+        LOCKED
     }
 
     private record CombatHit(UUID attacker, long timestamp) {
