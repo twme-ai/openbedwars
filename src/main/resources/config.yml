@@ -3,6 +3,7 @@ fallback-locale: en_US
 minimum-players: 2
 countdown-seconds: 20
 respawn-seconds: 5
+respawn-protection-seconds: 3
 ending-seconds: 10
 reconnect-grace-seconds: 120
 

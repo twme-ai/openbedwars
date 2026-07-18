@@ -84,6 +84,7 @@ public final class Arena {
     private final Map<String, Long> trapCooldownUntil = new HashMap<>();
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
+    private final RespawnProtectionTracker respawnProtection = new RespawnProtectionTracker();
 
     private GamePhase phase = GamePhase.WAITING;
     private int countdown;
@@ -190,6 +191,14 @@ public final class Arena {
         if (areEnemies(victim, attacker)) {
             lastHits.put(victim.getUniqueId(), new CombatHit(attacker.getUniqueId(), System.currentTimeMillis()));
         }
+    }
+
+    public boolean isRespawnProtected(Player player) {
+        return respawnProtection.isProtected(player.getUniqueId(), System.nanoTime());
+    }
+
+    public void removeRespawnProtection(Player player) {
+        respawnProtection.remove(player.getUniqueId());
     }
 
     public Player creditedKiller(Player victim) {
@@ -486,6 +495,7 @@ public final class Arena {
         team.removeMember(player.getUniqueId());
         cancelDisconnectTask(player.getUniqueId());
         lastHits.remove(player.getUniqueId());
+        respawnProtection.remove(player.getUniqueId());
         lastHits.entrySet().removeIf(entry -> entry.getValue().attacker().equals(player.getUniqueId()));
         cancelRespawnTasksFor(player.getUniqueId());
         playerRelease.accept(player.getUniqueId(), state.snapshot());
@@ -639,6 +649,7 @@ public final class Arena {
         TeamState victimTeam = teams.get(victimState.team());
         PlayerState killerState = killer == null ? null : players.get(killer.getUniqueId());
         lastHits.remove(victim.getUniqueId());
+        respawnProtection.remove(victim.getUniqueId());
         boolean finalDeath = !victimTeam.bedAlive();
         if (finalDeath) {
             dropFinalEnderChest(victim, victimTeam);
@@ -1073,6 +1084,8 @@ public final class Arena {
             if (remaining[0] <= 0) {
                 state.respawning(false);
                 kits.prepareForGame(player, state, teams.get(state.team()));
+                respawnProtection.grant(player.getUniqueId(), System.nanoTime(),
+                        settings.respawnProtectionSeconds());
                 player.teleportAsync(teams.get(state.team()).definition().spawn().toLocation(world));
                 player.showTitle(Title.title(messages.render(player, "respawn.done"), net.kyori.adventure.text.Component.empty(),
                         Title.Times.times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(250))));
@@ -1103,6 +1116,7 @@ public final class Arena {
         players.remove(state.playerId());
         teams.get(state.team()).removeMember(state.playerId());
         state.eliminated(true);
+        respawnProtection.remove(state.playerId());
         playerRelease.accept(state.playerId(), state.snapshot());
         broadcast("arena.reconnect-expired",
                 MessageService.text("player", state.playerName()),
@@ -1216,6 +1230,7 @@ public final class Arena {
         trapCooldownUntil.clear();
         lastHits.clear();
         trapImmuneUntil.clear();
+        respawnProtection.clear();
         scoreboards.clear();
         elapsedSeconds = 0;
         countdown = 0;

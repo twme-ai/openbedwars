@@ -147,18 +147,38 @@ public final class GameListener implements Listener {
                 arena.handleGeneratorPickup(player, event.getItem(), event.getRemaining()));
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
         Player attacker = attackingPlayer(event.getDamager());
         if (attacker == null || attacker.equals(victim)) return;
         Arena arena = arenas.arenaOf(victim).orElse(null);
-        if (arena == null || arenas.arenaOf(attacker).orElse(null) != arena) return;
-        if (!arena.areEnemies(victim, attacker)) {
+        Arena attackerArena = arenas.arenaOf(attacker).orElse(null);
+        if (arena == null) {
+            if (attackerArena != null) event.setCancelled(true);
+            return;
+        }
+        if (attackerArena != arena || !arena.areEnemies(victim, attacker)) {
             event.setCancelled(true);
             return;
         }
-        arena.recordHit(victim, attacker);
+        arena.removeRespawnProtection(attacker);
+        if (arena.isRespawnProtected(victim)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerDamageResolved(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player victim)) return;
+        Player attacker = attackingPlayer(event.getDamager());
+        if (attacker == null || attacker.equals(victim)) return;
+        Arena arena = arenas.arenaOf(victim).orElse(null);
+        if (arena != null
+                && arenas.arenaOf(attacker).orElse(null) == arena
+                && arena.areEnemies(victim, attacker)) {
+            arena.recordHit(victim, attacker);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -179,7 +199,9 @@ public final class GameListener implements Listener {
         arenas.arenaOf(player).ifPresent(arena -> {
             boolean vulnerable = arena.phase() == GamePhase.RUNNING
                     && arena.playerState(player.getUniqueId()).map(state -> !state.eliminated() && !state.respawning()).orElse(false);
-            if (!vulnerable) {
+            boolean protectedDamage = event.getCause() != EntityDamageEvent.DamageCause.VOID
+                    && arena.isRespawnProtected(player);
+            if (!vulnerable || protectedDamage) {
                 event.setCancelled(true);
             }
         });

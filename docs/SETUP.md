@@ -93,6 +93,17 @@ protection:
 
 Spawn protection extends the configured radius in every direction. Shop protection extends one block below and four blocks above the recorded location; forge and map-generator protection extends two blocks below and five blocks above it. A radius of `0` disables that protection type. These checks apply to player placement, buckets and flowing liquids, and plugin-generated structures.
 
+## Respawn protection
+
+Match respawn timing and the damage-protection window are configured globally in `config.yml`:
+
+```yaml
+respawn-seconds: 5
+respawn-protection-seconds: 3
+```
+
+After the respawn countdown, a player ignores non-void damage for the configured protection time. Hitting an enemy immediately removes the attacker's protection, while void damage always remains lethal. Set `respawn-protection-seconds` to `0` to disable the window. Protection is removed on death, arena leave, reconnect expiry, and match reset.
+
 ## Validate and enable
 
 ```text

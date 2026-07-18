@@ -14,6 +14,7 @@ public record GameSettings(
         int minimumPlayers,
         int countdownSeconds,
         int respawnSeconds,
+        int respawnProtectionSeconds,
         int endingSeconds,
         int reconnectGraceSeconds,
         int experiencePerMinute,
@@ -24,7 +25,8 @@ public record GameSettings(
         GeneratorSplitSettings generatorSplitting
 ) {
     public GameSettings {
-        if (minimumPlayers < 2 || countdownSeconds < 1 || respawnSeconds < 0 || endingSeconds < 1
+        if (minimumPlayers < 2 || countdownSeconds < 1 || respawnSeconds < 0 || respawnProtectionSeconds < 0
+                || endingSeconds < 1
                 || reconnectGraceSeconds < 0 || experiencePerMinute < 0 || winBonusExperience < 0) {
             throw new IllegalArgumentException("Invalid game timing configuration");
         }
@@ -44,6 +46,7 @@ public record GameSettings(
                 config.getInt("minimum-players", 2),
                 config.getInt("countdown-seconds", 20),
                 config.getInt("respawn-seconds", 5),
+                config.getInt("respawn-protection-seconds", 3),
                 config.getInt("ending-seconds", 10),
                 config.getInt("reconnect-grace-seconds", 120),
                 config.getInt("progression.experience-per-minute", 25),
