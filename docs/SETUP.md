@@ -91,6 +91,12 @@ Team Forge upgrades follow the standard four-tier progression:
 
 Emerald Forge deliberately keeps the Golden Forge iron and gold rate. Its upgrade is the new Emerald generator; Molten Forge is the next and final iron/gold speed increase.
 
+## Match start requirements
+
+An automatic countdown requires both the configured minimum player count and players on at least two opposing teams. If team changes or waiting-player departures collapse a running countdown to one occupied team, the countdown is cancelled and restarts only after competition returns.
+
+`/bw start [arena]` may bypass the configured minimum player count for testing or administration, but it still requires at least two occupied teams. A party that fills one team therefore waits for an opponent instead of starting an immediately decided match.
+
 ## Item shop inventory handling
 
 Purchases are capacity-checked against the inventory state after payment and any item replacement. A payment that consumes its last resource can free the slot needed by the product, while a matching but already-full stack does not count as available capacity. If the complete product cannot fit, the purchase is rejected before currency is removed.

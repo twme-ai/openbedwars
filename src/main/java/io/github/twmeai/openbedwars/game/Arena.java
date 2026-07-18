@@ -669,7 +669,8 @@ public final class Arena {
     }
 
     public boolean forceStart() {
-        if ((phase != GamePhase.WAITING && phase != GamePhase.STARTING) || players.size() < 2) {
+        if ((phase != GamePhase.WAITING && phase != GamePhase.STARTING)
+                || !MatchStartPolicy.canForceStart(players.size(), occupiedTeamCount())) {
             return false;
         }
         startGame();
@@ -838,11 +839,19 @@ public final class Arena {
     }
 
     private boolean hasEnoughPlayers() {
-        return players.size() >= Math.max(definition.minPlayers(), settings.minimumPlayers());
+        return MatchStartPolicy.canStartNormally(
+                players.size(),
+                Math.max(definition.minPlayers(), settings.minimumPlayers()),
+                occupiedTeamCount()
+        );
+    }
+
+    private int occupiedTeamCount() {
+        return (int) teams.values().stream().filter(team -> !team.members().isEmpty()).count();
     }
 
     private void startGame() {
-        if (players.size() < 2) {
+        if (!MatchStartPolicy.canForceStart(players.size(), occupiedTeamCount())) {
             cancelCountdown();
             return;
         }
