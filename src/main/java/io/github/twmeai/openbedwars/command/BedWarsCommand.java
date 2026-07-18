@@ -97,9 +97,12 @@ public final class BedWarsCommand implements TabExecutor {
             messages.send(player, "error.unknown-command");
             return;
         }
-        Arena arena = args[1].equalsIgnoreCase("random")
-                ? arenas.bestAvailableArena().orElse(null)
-                : arenas.arena(args[1]).orElse(null);
+        boolean random = args[1].equalsIgnoreCase("random");
+        if (random) {
+            plugin.partyService().joinRandomArena(player);
+            return;
+        }
+        Arena arena = arenas.arena(args[1]).orElse(null);
         if (arena == null) {
             messages.send(player, "error.arena-not-found", MessageService.text("arena", args[1]));
             return;

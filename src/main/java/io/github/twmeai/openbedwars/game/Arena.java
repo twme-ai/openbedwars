@@ -63,7 +63,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public final class Arena {
+public final class Arena implements ArenaSelectionPolicy.Candidate {
     private static final String DRAGON_TAG = "openbedwars_dragon";
     private static final String DRAGON_TEAM_TAG_PREFIX = "openbedwars_owned_dragon_";
     private static final DamageType VOID_DAMAGE_TYPE = RegistryAccess.registryAccess()
@@ -541,8 +541,7 @@ public final class Arena {
     }
 
     boolean canAccept(int count) {
-        return (phase == GamePhase.WAITING || phase == GamePhase.STARTING)
-                && players.size() + count <= definition.maxPlayers();
+        return ArenaSelectionPolicy.canAccept(this, count);
     }
 
     TeamColor preferredTeam(int desiredPlayers) {

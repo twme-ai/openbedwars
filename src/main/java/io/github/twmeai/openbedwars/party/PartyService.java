@@ -79,11 +79,7 @@ public final class PartyService {
             plugin.messages().send(requester, "party.leader-must-join");
             return;
         }
-        List<Player> online = party.members().keySet().stream()
-                .map(Bukkit::getPlayer)
-                .filter(java.util.Objects::nonNull)
-                .filter(Player::isOnline)
-                .toList();
+        List<Player> online = onlineMembers(party);
         if (online.stream().anyMatch(player -> arenas.arenaOf(player).isPresent())) {
             plugin.messages().send(requester, "party.member-busy");
             return;
@@ -100,6 +96,25 @@ public final class PartyService {
         } else {
             sendJoinResult(requester, arena, result);
         }
+    }
+
+    public void joinRandomArena(Player requester) {
+        Party party = partyByMember.get(requester.getUniqueId());
+        if (party != null && !party.leader().equals(requester.getUniqueId())) {
+            plugin.messages().send(requester, "party.leader-must-join");
+            return;
+        }
+        List<Player> online = party == null ? List.of(requester) : onlineMembers(party);
+        if (party != null && online.stream().anyMatch(player -> arenas.arenaOf(player).isPresent())) {
+            plugin.messages().send(requester, "party.member-busy");
+            return;
+        }
+        Arena arena = arenas.bestAvailableArena(online.size()).orElse(null);
+        if (arena == null) {
+            plugin.messages().send(requester, "error.no-arena-available");
+            return;
+        }
+        joinArena(requester, arena);
     }
 
     public void shutdown() {
@@ -284,6 +299,14 @@ public final class PartyService {
             return null;
         }
         return party;
+    }
+
+    private List<Player> onlineMembers(Party party) {
+        return party.members().keySet().stream()
+                .map(Bukkit::getPlayer)
+                .filter(java.util.Objects::nonNull)
+                .filter(Player::isOnline)
+                .toList();
     }
 
     private void disbandParty(Party party) {

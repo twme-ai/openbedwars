@@ -97,6 +97,12 @@ An automatic countdown requires both the configured minimum player count and pla
 
 `/bw start [arena]` may bypass the configured minimum player count for testing or administration, but it still requires at least two occupied teams. A party that fills one team therefore waits for an opponent instead of starting an immediately decided match.
 
+## Party matchmaking
+
+`/bw join random` counts every online party member before selecting an arena. It prefers the waiting or starting arena with the most players among those that can fit the complete online group; a fuller arena with too few remaining slots is skipped. The group join is atomic, so a failed member join rolls back everyone instead of leaving a partial party in the arena.
+
+Offline party members remain in the party but are not reserved an arena slot. When no arena can fit the whole online group, the requester receives a dedicated availability error rather than an arena-not-found message.
+
 ## Item shop inventory handling
 
 Purchases are capacity-checked against the inventory state after payment and any item replacement. A payment that consumes its last resource can free the slot needed by the product, while a matching but already-full stack does not count as available capacity. If the complete product cannot fit, the purchase is rejected before currency is removed.

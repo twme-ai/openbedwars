@@ -94,4 +94,6 @@ A focused three-client Counter-Offensive run placed two players on Red and one o
 
 A focused two-client start-policy run first allowed the automatically balanced players to enter countdown, then moved both onto Red. The next arena tick cancelled that countdown, waiting beyond the original deadline did not start a match, and an explicit administrator force-start was rejected. Moving one player back to Blue restarted the countdown and entered the running phase normally. The run retained pre-existing server locale files while the bundled bilingual catalogs passed parity checks, then the standard full-match regression passed.
 
+A focused three-client, two-arena party run placed one solo player into a `1/2` waiting arena and left a second `0/4` arena empty. After two other clients formed a party, `/bw join random` skipped the fuller one-slot arena and atomically placed both clients into the empty arena; the live list then reported `2/4` and `1/2` without an arena-full response. The temporary second arena was removed after the standard full-match regression passed.
+
 This run validates one complete standard match path. It is not a substitute for long-running soak tests or exhaustive interaction tests for every shop item, special item, reconnect timing, and party transition.

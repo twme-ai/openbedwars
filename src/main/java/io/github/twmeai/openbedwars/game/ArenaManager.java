@@ -38,10 +38,11 @@ public final class ArenaManager {
     }
 
     public Optional<Arena> bestAvailableArena() {
-        return arenas.values().stream()
-                .filter(arena -> (arena.phase() == GamePhase.WAITING || arena.phase() == GamePhase.STARTING)
-                        && arena.playerCount() < arena.maxPlayers())
-                .max(java.util.Comparator.comparingInt(Arena::playerCount));
+        return bestAvailableArena(1);
+    }
+
+    public Optional<Arena> bestAvailableArena(int groupSize) {
+        return ArenaSelectionPolicy.fullestAvailable(arenas.values(), groupSize);
     }
 
     public Optional<Arena> arenaOf(Player player) {
