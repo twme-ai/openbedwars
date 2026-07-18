@@ -43,6 +43,10 @@ public final class ArenaManager {
         return arenas.values().stream().filter(arena -> arena.world().equals(world)).findFirst();
     }
 
+    public boolean hasActiveGames() {
+        return arenas.values().stream().anyMatch(arena -> arena.playerCount() > 0 || arena.phase() != GamePhase.WAITING);
+    }
+
     public Arena.JoinResult join(Player player, Arena arena) {
         if (playerArenas.containsKey(player.getUniqueId())) {
             return Arena.JoinResult.ALREADY_JOINED;

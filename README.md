@@ -22,10 +22,12 @@ The plugin JAR is generated in `build/libs/`.
 ## Configuration
 
 1. Start Paper once with OpenBedWars installed.
-2. Copy the example in `plugins/OpenBedWars/arenas.yml`.
-3. Set the arena world and every team, bed, shop, forge, and generator location.
-4. Set `enabled: true` and run `/bw reload`.
+2. Load a dedicated arena world.
+3. Run `/bw setup create <arena> [playersPerTeam]` and record every required location.
+4. Run `/bw setup enable <arena>` to validate and load it.
 5. Join with `/bw join <arena>`.
+
+See [docs/SETUP.md](docs/SETUP.md) for the complete command sequence. `arenas.yml` remains available for manual or automated configuration.
 
 All messages use MiniMessage and live in `plugins/OpenBedWars/lang/`. English (`en_US`) and Traditional Chinese (`zh_TW`) are included. Players select a language with `/bw language <locale>`.
 

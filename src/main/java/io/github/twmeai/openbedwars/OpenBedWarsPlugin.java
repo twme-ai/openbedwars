@@ -1,6 +1,7 @@
 package io.github.twmeai.openbedwars;
 
 import io.github.twmeai.openbedwars.command.BedWarsCommand;
+import io.github.twmeai.openbedwars.config.ArenaSetupService;
 import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.listener.GameListener;
 import io.github.twmeai.openbedwars.message.MessageService;
@@ -20,6 +21,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
     private UpgradeService upgradeService;
     private SpecialItemService specialItemService;
     private StatisticsService statisticsService;
+    private ArenaSetupService arenaSetupService;
 
     @Override
     public void onEnable() {
@@ -28,6 +30,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         messages = new MessageService(this);
         statisticsService = new StatisticsService(this);
         arenaManager = new ArenaManager(this);
+        arenaSetupService = new ArenaSetupService(this, arenaManager);
         shopService = new ShopService(this, arenaManager);
         upgradeService = new UpgradeService(this, arenaManager);
         specialItemService = new SpecialItemService(this, arenaManager);
@@ -71,6 +74,10 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
 
     public StatisticsService statisticsService() {
         return statisticsService;
+    }
+
+    public ArenaSetupService arenaSetupService() {
+        return arenaSetupService;
     }
 
     private void saveResourceIfMissing(String path) {

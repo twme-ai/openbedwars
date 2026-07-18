@@ -48,6 +48,7 @@ public final class BedWarsCommand implements TabExecutor {
             case "start" -> start(sender, args);
             case "stop" -> stop(sender, args);
             case "reload" -> reload(sender);
+            case "setup" -> setup(sender, args);
             case "shop" -> openShop(sender);
             case "upgrades" -> openUpgrades(sender);
             default -> messages.send(sender, "error.unknown-command");
@@ -166,8 +167,19 @@ public final class BedWarsCommand implements TabExecutor {
         if (!requireAdmin(sender)) {
             return;
         }
+        if (arenas.hasActiveGames()) {
+            messages.send(sender, "setup.active-games");
+            return;
+        }
         arenas.reload();
         messages.send(sender, "config.reloaded");
+    }
+
+    private void setup(CommandSender sender, String[] args) {
+        Player player = requirePlayer(sender);
+        if (player != null) {
+            plugin.arenaSetupService().execute(player, args);
+        }
     }
 
     private void openShop(CommandSender sender) {
@@ -229,7 +241,7 @@ public final class BedWarsCommand implements TabExecutor {
         if (args.length == 1) {
             List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "stats", "language", "shop", "upgrades"));
             if (sender.hasPermission("openbedwars.admin")) {
-                commands.addAll(List.of("start", "stop", "reload"));
+                commands.addAll(List.of("start", "stop", "reload", "setup"));
             }
             return matches(commands, args[0]);
         }
@@ -241,6 +253,9 @@ public final class BedWarsCommand implements TabExecutor {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("stats")) {
             return matches(org.bukkit.Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
+        }
+        if (args.length >= 2 && args[0].equalsIgnoreCase("setup") && sender.hasPermission("openbedwars.admin")) {
+            return plugin.arenaSetupService().tabComplete(args);
         }
         return List.of();
     }

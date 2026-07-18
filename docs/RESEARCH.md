@@ -14,6 +14,7 @@ This document records the behavior sources consulted before implementation. Open
 - [Screaming BedWars Bridge Egg](https://github.com/ScreamingSandals/BedWars/blob/master/plugin/common/src/main/java/org/screamingsandals/bedwars/special/BridgeEggImpl.java) and [Pop-up Tower](https://github.com/ScreamingSandals/BedWars/blob/master/plugin/common/src/main/java/org/screamingsandals/bedwars/special/PopUpTowerImpl.java): behavior reference for distance-limited team-colored bridge trails and orientation-aware temporary tower blocks.
 - [Paper database guidance](https://docs.papermc.io/paper/dev/using-databases/) and [scheduler guidance](https://docs.papermc.io/paper/dev/scheduler/): SQLite is appropriate for a small file-backed plugin database; prepared statements prevent injection, and database/file access belongs off the main server thread.
 - [BedWars1058 default statistics](https://github.com/andrei1058/BedWars1058/blob/master/bedwars-api/src/main/java/com/andrei1058/bedwars/api/arena/stats/DefaultStatistics.java): cross-reference for kills, final kills, deaths, final deaths, and beds destroyed as distinct gameplay statistics.
+- [BedWars1058 setup commands](https://github.com/andrei1058/BedWars1058/tree/master/bedwars-plugin/src/main/java/com/andrei1058/bedwars/commands/bedwars/subcmds/sensitive/setup): cross-reference for waiting/spectator positions, team creation, spawns, beds, item/upgrade shops, and generators as the minimum arena setup workflow.
 
 ## Initial behavior target
 
