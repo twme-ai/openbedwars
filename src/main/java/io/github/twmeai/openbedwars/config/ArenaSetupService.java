@@ -5,6 +5,7 @@ import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.game.ResourceType;
 import io.github.twmeai.openbedwars.game.TeamColor;
 import io.github.twmeai.openbedwars.message.MessageService;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.type.Bed;
@@ -137,7 +138,7 @@ public final class ArenaSetupService {
         if (context == null) return;
         context.yaml().set(context.path() + "." + field, serialize(player.getLocation(), true));
         save(context.yaml());
-        saved(player, field, context.key());
+        saved(player, setupField(player, field), context.key());
     }
 
     private void height(Player player, String[] args, String field) throws IOException, InvalidConfigurationException {
@@ -145,7 +146,7 @@ public final class ArenaSetupService {
         if (context == null) return;
         context.yaml().set(context.path() + "." + field, player.getLocation().getBlockY());
         save(context.yaml());
-        saved(player, field, context.key());
+        saved(player, setupField(player, field), context.key());
     }
 
     private void addTeam(Player player, String[] args) throws IOException, InvalidConfigurationException {
@@ -154,7 +155,8 @@ public final class ArenaSetupService {
         if (context == null || color == null) return;
         String path = context.path() + ".teams." + color.key();
         if (context.yaml().isConfigurationSection(path)) {
-            plugin.messages().send(player, "setup.team-exists", MessageService.text("team", color.displayName()));
+            plugin.messages().send(player, "setup.team-exists",
+                    MessageService.component("team", teamName(player, color)));
             return;
         }
         context.yaml().createSection(path);
@@ -163,7 +165,8 @@ public final class ArenaSetupService {
         context.yaml().set(context.path() + ".max-players", teams * playersPerTeam);
         save(context.yaml());
         plugin.messages().send(player, "setup.team-added",
-                MessageService.text("team", color.displayName()), MessageService.text("arena", context.key()));
+                MessageService.component("team", teamName(player, color)),
+                MessageService.text("arena", context.key()));
     }
 
     private void teamLocation(Player player, String[] args, String field) throws IOException, InvalidConfigurationException {
@@ -173,7 +176,7 @@ public final class ArenaSetupService {
         context.yaml().set(context.path() + ".teams." + color.key() + "." + field,
                 serialize(player.getLocation(), true));
         save(context.yaml());
-        saved(player, color.displayName() + " " + field, context.key());
+        saved(player, teamField(player, color, field), context.key());
     }
 
     private void bed(Player player, String[] args) throws IOException, InvalidConfigurationException {
@@ -198,7 +201,7 @@ public final class ArenaSetupService {
         context.yaml().set(teamPath + ".bed-head", serialize(head.getLocation(), false));
         context.yaml().set(teamPath + ".bed-foot", serialize(foot.getLocation(), false));
         save(context.yaml());
-        saved(player, color.displayName() + " bed", context.key());
+        saved(player, teamField(player, color, "bed"), context.key());
     }
 
     private void generator(Player player, String[] args) throws IOException, InvalidConfigurationException {
@@ -221,7 +224,7 @@ public final class ArenaSetupService {
         context.yaml().set(path, locations);
         save(context.yaml());
         plugin.messages().send(player, "setup.generator-added",
-                MessageService.text("type", type.name().toLowerCase(Locale.ROOT)),
+                MessageService.component("type", plugin.messages().render(player, type.translationKey())),
                 MessageService.text("arena", context.key()));
     }
 
@@ -301,7 +304,8 @@ public final class ArenaSetupService {
 
     private boolean requireTeam(Player player, SetupContext context, TeamColor color) {
         if (!context.yaml().isConfigurationSection(context.path() + ".teams." + color.key())) {
-            plugin.messages().send(player, "setup.team-missing", MessageService.text("team", color.displayName()));
+            plugin.messages().send(player, "setup.team-missing",
+                    MessageService.component("team", teamName(player, color)));
             return false;
         }
         return true;
@@ -347,9 +351,23 @@ public final class ArenaSetupService {
         }
     }
 
-    private void saved(Player player, String field, String arena) {
+    private Component teamName(Player player, TeamColor color) {
+        return plugin.messages().render(player, color.translationKey());
+    }
+
+    private Component setupField(Player player, String field) {
+        return plugin.messages().render(player, "setup.field." + field.replace('-', '_'));
+    }
+
+    private Component teamField(Player player, TeamColor color, String field) {
+        return plugin.messages().render(player, "setup.field.team",
+                MessageService.component("team", teamName(player, color)),
+                MessageService.component("field", setupField(player, field)));
+    }
+
+    private void saved(Player player, Component field, String arena) {
         plugin.messages().send(player, "setup.saved",
-                MessageService.text("field", field), MessageService.text("arena", arena));
+                MessageService.component("field", field), MessageService.text("arena", arena));
     }
 
     private List<String> matches(Collection<String> values, String prefix) {

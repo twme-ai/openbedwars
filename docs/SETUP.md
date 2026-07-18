@@ -152,3 +152,16 @@ Use `/bw list` to verify the arena, then join with `/bw join <arena>`. Disable o
 ```
 
 Deletion only removes the `arenas.yml` section. It does not delete the world.
+
+## Languages
+
+Players can switch between the bundled English and Traditional Chinese catalogs at any time:
+
+```text
+/bw language en_US
+/bw language zh_TW
+```
+
+The selected locale is stored on the player. Arena phases, team colors, timed events, setup fields, shop content, statistics, chat messages, and scoreboard text are resolved separately for every recipient. A language change during a match updates the scoreboard title and lines on the next arena tick.
+
+Custom locale files may override bundled values in `plugins/OpenBedWars/lang/`. Keep their string-key set aligned with `en_US.yml`; missing custom values fall back to the configured fallback locale.

@@ -84,12 +84,12 @@ public final class UpgradeService implements Listener {
                 .decoration(TextDecoration.ITALIC, false));
         List<Component> lore = new ArrayList<>();
         if (offer.level() > 0) {
-            lore.add(Component.text("Current tier: " + offer.level(), NamedTextColor.GRAY)
+            lore.add(messages.render(player, "shop.current-tier", MessageService.number("tier", offer.level()))
                     .decoration(TextDecoration.ITALIC, false));
         }
         lore.add(messages.render(player, "shop.cost",
                 MessageService.number("cost", offer.cost()),
-                MessageService.text("resource", ResourceType.DIAMOND.displayName(offer.cost())),
+                MessageService.component("resource", messages.render(player, ResourceType.DIAMOND.translationKey())),
                 MessageService.color("cost_color", NamedTextColor.AQUA)));
         lore.add(Component.empty());
         lore.add(messages.render(player, offer.maxed() ? "shop.maxed" : "shop.click"));
@@ -121,7 +121,8 @@ public final class UpgradeService implements Listener {
         if (available < offer.cost()) {
             messages.send(player, "error.not-enough-resources",
                     MessageService.number("cost", offer.cost() - available),
-                    MessageService.text("resource", ResourceType.DIAMOND.displayName(offer.cost() - available)));
+                    MessageService.component("resource",
+                            messages.render(player, ResourceType.DIAMOND.translationKey())));
             return;
         }
         InventoryCurrency.take(player.getInventory(), ResourceType.DIAMOND, offer.cost());

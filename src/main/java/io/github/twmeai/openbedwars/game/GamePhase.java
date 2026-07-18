@@ -4,5 +4,9 @@ public enum GamePhase {
     WAITING,
     STARTING,
     RUNNING,
-    ENDING
+    ENDING;
+
+    public String translationKey() {
+        return "phase." + name().toLowerCase(java.util.Locale.ROOT);
+    }
 }

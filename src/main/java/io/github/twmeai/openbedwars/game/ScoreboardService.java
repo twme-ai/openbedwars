@@ -38,7 +38,7 @@ public final class ScoreboardService {
             Player player = Bukkit.getPlayer(state.playerId());
             if (player == null) continue;
             Board board = boards.computeIfAbsent(state.playerId(), ignored -> create(player));
-            board.update(lines(player, arena, state, upcoming));
+            board.update(messages.render(player, "scoreboard.title"), lines(player, arena, state, upcoming));
             if (player.getScoreboard() != board.scoreboard()) {
                 player.setScoreboard(board.scoreboard());
             }
@@ -58,7 +58,7 @@ public final class ScoreboardService {
         lines.add(messages.render(player, "scoreboard.date", MessageService.text("date", DATE.format(LocalDate.now()))));
         lines.add(Component.empty());
         lines.add(messages.render(player, "scoreboard.event",
-                MessageService.text("event", upcoming.type().displayName()),
+                MessageService.component("event", messages.render(player, upcoming.type().translationKey())),
                 MessageService.text("time", formatTime(upcoming.secondsRemaining()))));
         lines.add(Component.empty());
         for (TeamState team : arena.teams().values()) {
@@ -78,7 +78,7 @@ public final class ScoreboardService {
             }
             lines.add(messages.render(player, "scoreboard.team-alive",
                     MessageService.text("symbol", team.color() == playerState.team() ? ">" : " "),
-                    MessageService.text("team", team.color().displayName()),
+                    MessageService.component("team", messages.render(player, team.color().translationKey())),
                     MessageService.component("status", status),
                     MessageService.teamColor("team_color", team.color())));
         }
@@ -103,15 +103,16 @@ public final class ScoreboardService {
             objective.getScore(entry).setScore(15 - index);
             lineTeams.add(team);
         }
-        return new Board(scoreboard, lineTeams);
+        return new Board(scoreboard, objective, lineTeams);
     }
 
     private String formatTime(int seconds) {
         return "%d:%02d".formatted(Math.max(0, seconds) / 60, Math.max(0, seconds) % 60);
     }
 
-    private record Board(Scoreboard scoreboard, List<Team> teams) {
-        void update(List<Component> lines) {
+    private record Board(Scoreboard scoreboard, Objective objective, List<Team> teams) {
+        void update(Component title, List<Component> lines) {
+            objective.displayName(title);
             for (int index = 0; index < teams.size(); index++) {
                 teams.get(index).prefix(index < lines.size() ? lines.get(index) : Component.empty());
             }

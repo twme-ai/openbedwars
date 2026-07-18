@@ -12,6 +12,7 @@ import io.papermc.paper.registry.RegistryKey;
 import io.papermc.paper.registry.keys.DamageTypeKeys;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
@@ -60,6 +61,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public final class Arena {
     private static final String DRAGON_TAG = "openbedwars_dragon";
@@ -865,7 +867,9 @@ public final class Arena {
                 broadcast("arena.sudden-death");
             }
             case GAME_END -> beginEnding(null, true);
-            default -> broadcast("arena.event", MessageService.text("event", type.displayName()));
+            default -> broadcastLocalized("arena.event", player -> new TagResolver[]{
+                    MessageService.component("event", messages.render(player, type.translationKey()))
+            });
         }
     }
 
@@ -1067,12 +1071,13 @@ public final class Arena {
                 messages.send(member, "bed.destroyed-own");
             }
         }
-        broadcast("bed.destroyed-global",
+        broadcastLocalized("bed.destroyed-global", player -> new TagResolver[]{
                 MessageService.text("bed_symbol", "X"),
-                MessageService.text("team", bedTeam.color().displayName()),
+                MessageService.component("team", messages.render(player, bedTeam.color().translationKey())),
                 MessageService.text("player", destroyer.getName()),
                 MessageService.teamColor("team_color", bedTeam.color()),
-                MessageService.teamColor("destroyer_color", destroyerState.team()));
+                MessageService.teamColor("destroyer_color", destroyerState.team())
+        });
     }
 
     private void destroyAllBeds() {
@@ -1263,9 +1268,10 @@ public final class Arena {
         if (winner == null) {
             broadcast("arena.draw");
         } else {
-            broadcast("arena.victory",
-                    MessageService.text("team", winner.color().displayName()),
-                    MessageService.teamColor("team_color", winner.color()));
+            broadcastLocalized("arena.victory", player -> new TagResolver[]{
+                    MessageService.component("team", messages.render(player, winner.color().translationKey())),
+                    MessageService.teamColor("team_color", winner.color())
+            });
         }
     }
 
@@ -1464,11 +1470,20 @@ public final class Arena {
         trackEntity(dropped);
     }
 
-    private void broadcast(String key, net.kyori.adventure.text.minimessage.tag.resolver.TagResolver... resolvers) {
+    private void broadcast(String key, TagResolver... resolvers) {
         for (UUID playerId : players.keySet()) {
             Player player = Bukkit.getPlayer(playerId);
             if (player != null) {
                 messages.send(player, key, resolvers);
+            }
+        }
+    }
+
+    private void broadcastLocalized(String key, Function<Player, TagResolver[]> resolvers) {
+        for (UUID playerId : players.keySet()) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) {
+                messages.send(player, key, resolvers.apply(player));
             }
         }
     }

@@ -159,7 +159,7 @@ public final class ShopService implements Listener {
         List<Component> lore = new ArrayList<>();
         lore.add(messages.render(player, "shop.cost",
                 MessageService.number("cost", offer.cost()),
-                MessageService.text("resource", offer.currency().displayName(offer.cost())),
+                MessageService.component("resource", messages.render(player, offer.currency().translationKey())),
                 currencyColor(offer.currency())));
         lore.add(Component.empty());
         lore.add(messages.render(player, offer.maxed() ? "shop.maxed" : "shop.click"));
@@ -209,7 +209,7 @@ public final class ShopService implements Listener {
         if (available < offer.cost()) {
             messages.send(player, "error.not-enough-resources",
                     MessageService.number("cost", offer.cost() - available),
-                    MessageService.text("resource", offer.currency().displayName(offer.cost() - available)));
+                    MessageService.component("resource", messages.render(player, offer.currency().translationKey())));
             return false;
         }
         if (!canFit(player, item)) {

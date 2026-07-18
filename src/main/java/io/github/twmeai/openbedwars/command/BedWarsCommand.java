@@ -7,6 +7,8 @@ import io.github.twmeai.openbedwars.game.GamePhase;
 import io.github.twmeai.openbedwars.game.TeamColor;
 import io.github.twmeai.openbedwars.message.MessageService;
 import io.github.twmeai.openbedwars.statistics.LeaderboardMetric;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -70,14 +72,16 @@ public final class BedWarsCommand implements TabExecutor {
     }
 
     private void list(CommandSender sender) {
-        String value = arenas.arenas().values().stream()
-                .map(arena -> arena.displayName() + " [" + arena.playerCount() + "/" + arena.maxPlayers() + ", "
-                        + arena.phase().name().toLowerCase(Locale.ROOT) + "]")
-                .collect(java.util.stream.Collectors.joining(", "));
-        if (value.isEmpty()) {
-            value = "none";
-        }
-        messages.send(sender, "arena.list-header", MessageService.text("arenas", value));
+        List<Component> entries = arenas.arenas().values().stream()
+                .<Component>map(arena -> Component.text(arena.displayName() + " ["
+                                + arena.playerCount() + "/" + arena.maxPlayers() + ", ")
+                        .append(messages.render(sender, arena.phase().translationKey()))
+                        .append(Component.text("]")))
+                .toList();
+        Component value = entries.isEmpty()
+                ? messages.render(sender, "arena.none")
+                : Component.join(JoinConfiguration.separator(Component.text(", ")), entries);
+        messages.send(sender, "arena.list-header", MessageService.component("arenas", value));
     }
 
     private void join(CommandSender sender, String[] args) {
@@ -121,7 +125,7 @@ public final class BedWarsCommand implements TabExecutor {
         Arena.TeamChangeResult result = arenas.changeTeam(player, color);
         switch (result) {
             case SUCCESS -> messages.send(player, "arena.team-selected",
-                    MessageService.text("team", color.displayName()),
+                    MessageService.component("team", messages.render(player, color.translationKey())),
                     MessageService.teamColor("team_color", color));
             case FULL -> messages.send(player, "arena.team-full");
             case INVALID -> messages.send(player, "error.not-in-arena");

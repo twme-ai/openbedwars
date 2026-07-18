@@ -10,29 +10,26 @@ import java.util.Locale;
 import java.util.Optional;
 
 public enum TeamColor {
-    RED("Red", NamedTextColor.RED, DyeColor.RED, Color.RED, Material.RED_WOOL),
-    BLUE("Blue", NamedTextColor.BLUE, DyeColor.BLUE, Color.BLUE, Material.BLUE_WOOL),
-    GREEN("Green", NamedTextColor.GREEN, DyeColor.LIME, Color.LIME, Material.LIME_WOOL),
-    YELLOW("Yellow", NamedTextColor.YELLOW, DyeColor.YELLOW, Color.YELLOW, Material.YELLOW_WOOL),
-    AQUA("Aqua", NamedTextColor.AQUA, DyeColor.LIGHT_BLUE, Color.AQUA, Material.LIGHT_BLUE_WOOL),
-    WHITE("White", NamedTextColor.WHITE, DyeColor.WHITE, Color.WHITE, Material.WHITE_WOOL),
-    PINK("Pink", NamedTextColor.LIGHT_PURPLE, DyeColor.PINK, Color.FUCHSIA, Material.PINK_WOOL),
-    GRAY("Gray", NamedTextColor.GRAY, DyeColor.GRAY, Color.GRAY, Material.GRAY_WOOL);
+    RED(NamedTextColor.RED, DyeColor.RED, Color.RED, Material.RED_WOOL),
+    BLUE(NamedTextColor.BLUE, DyeColor.BLUE, Color.BLUE, Material.BLUE_WOOL),
+    GREEN(NamedTextColor.GREEN, DyeColor.LIME, Color.LIME, Material.LIME_WOOL),
+    YELLOW(NamedTextColor.YELLOW, DyeColor.YELLOW, Color.YELLOW, Material.YELLOW_WOOL),
+    AQUA(NamedTextColor.AQUA, DyeColor.LIGHT_BLUE, Color.AQUA, Material.LIGHT_BLUE_WOOL),
+    WHITE(NamedTextColor.WHITE, DyeColor.WHITE, Color.WHITE, Material.WHITE_WOOL),
+    PINK(NamedTextColor.LIGHT_PURPLE, DyeColor.PINK, Color.FUCHSIA, Material.PINK_WOOL),
+    GRAY(NamedTextColor.GRAY, DyeColor.GRAY, Color.GRAY, Material.GRAY_WOOL);
 
-    private final String displayName;
     private final NamedTextColor textColor;
     private final DyeColor dyeColor;
     private final Color leatherColor;
     private final Material wool;
 
     TeamColor(
-            String displayName,
             NamedTextColor textColor,
             DyeColor dyeColor,
             Color leatherColor,
             Material wool
     ) {
-        this.displayName = displayName;
         this.textColor = textColor;
         this.dyeColor = dyeColor;
         this.leatherColor = leatherColor;
@@ -43,8 +40,8 @@ public enum TeamColor {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    public String displayName() {
-        return displayName;
+    public String translationKey() {
+        return "team." + key();
     }
 
     public NamedTextColor textColor() {

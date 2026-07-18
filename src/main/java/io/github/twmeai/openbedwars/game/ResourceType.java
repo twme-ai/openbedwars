@@ -51,11 +51,4 @@ public enum ResourceType {
         return Optional.empty();
     }
 
-    public String displayName(int amount) {
-        String name = name().toLowerCase(Locale.ROOT);
-        if (this == IRON || this == GOLD || amount == 1) {
-            return name;
-        }
-        return name + "s";
-    }
 }

@@ -43,7 +43,7 @@ Implemented in the current development build:
 - Hypixel-style Quick Buy and item shop categories, permanent armor and shears, tiered tools, potions with enemy-hidden armor, and utilities
 - Team upgrades, an ordered three-trap queue, heal pool, and team-owned Sudden Death dragons with Dragon Buff
 - Cooldown-limited Fireballs plus working Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers
-- Per-player MiniMessage locales, English and Traditional Chinese translations, and localized scoreboards
+- Per-player MiniMessage locales, complete English and Traditional Chinese dynamic names, and live-localized scoreboards
 - Asynchronous SQLite statistics for games, wins/losses, kills, final kills/deaths, beds, XP, and Bed Wars levels
 - Automatic same-game reconnect with a configurable grace period and delayed snapshot restoration
 - Final-elimination spectator flight with an active-player teleporter, enemy-hidden observers, and a return-to-lobby item

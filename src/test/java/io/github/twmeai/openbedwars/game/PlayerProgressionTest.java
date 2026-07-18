@@ -16,14 +16,6 @@ class PlayerProgressionTest {
     }
 
     @Test
-    void resourceNamesHandleUncountableCurrencies() {
-        assertEquals("iron", ResourceType.IRON.displayName(2));
-        assertEquals("gold", ResourceType.GOLD.displayName(2));
-        assertEquals("diamonds", ResourceType.DIAMOND.displayName(2));
-        assertEquals("emerald", ResourceType.EMERALD.displayName(1));
-    }
-
-    @Test
     void generatorMaterialsMapToResourceTypes() {
         assertEquals(ResourceType.IRON, ResourceType.fromMaterial(Material.IRON_INGOT).orElseThrow());
         assertEquals(ResourceType.GOLD, ResourceType.fromMaterial(Material.GOLD_INGOT).orElseThrow());
