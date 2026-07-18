@@ -307,6 +307,10 @@ public final class Arena {
     }
 
     public JoinResult join(Player player) {
+        return join(player, null);
+    }
+
+    JoinResult join(Player player, TeamColor preferredTeam) {
         if (phase == GamePhase.RUNNING || phase == GamePhase.ENDING) {
             return JoinResult.RUNNING;
         }
@@ -316,10 +320,14 @@ public final class Arena {
         if (players.size() >= definition.maxPlayers()) {
             return JoinResult.FULL;
         }
-        TeamState team = teams.values().stream()
-                .filter(candidate -> candidate.size() < definition.playersPerTeam())
-                .min(Comparator.comparingInt(TeamState::size).thenComparingInt(candidate -> candidate.color().ordinal()))
-                .orElse(null);
+        TeamState team = preferredTeam == null ? null : teams.get(preferredTeam);
+        if (team != null && team.size() >= definition.playersPerTeam()) team = null;
+        if (team == null) {
+            team = teams.values().stream()
+                    .filter(candidate -> candidate.size() < definition.playersPerTeam())
+                    .min(Comparator.comparingInt(TeamState::size).thenComparingInt(candidate -> candidate.color().ordinal()))
+                    .orElse(null);
+        }
         if (team == null) {
             return JoinResult.FULL;
         }
@@ -338,6 +346,25 @@ public final class Arena {
             beginCountdown();
         }
         return JoinResult.SUCCESS;
+    }
+
+    boolean canAccept(int count) {
+        return (phase == GamePhase.WAITING || phase == GamePhase.STARTING)
+                && players.size() + count <= definition.maxPlayers();
+    }
+
+    TeamColor preferredTeam(int desiredPlayers) {
+        TeamColor enoughSpace = teams.values().stream()
+                .filter(team -> definition.playersPerTeam() - team.size() >= desiredPlayers)
+                .min(Comparator.comparingInt(TeamState::size).thenComparingInt(team -> team.color().ordinal()))
+                .map(TeamState::color)
+                .orElse(null);
+        if (enoughSpace != null) return enoughSpace;
+        return teams.values().stream()
+                .filter(team -> team.size() < definition.playersPerTeam())
+                .min(Comparator.comparingInt(TeamState::size).thenComparingInt(team -> team.color().ordinal()))
+                .map(TeamState::color)
+                .orElse(null);
     }
 
     public boolean leave(Player player, boolean notify) {

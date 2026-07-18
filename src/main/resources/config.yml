@@ -10,6 +10,10 @@ progression:
   experience-per-minute: 25
   win-bonus-experience: 100
 
+party:
+  max-size: 4
+  invite-expiration-seconds: 60
+
 # Hypixel-style default event schedule. Values are elapsed game seconds.
 events:
   diamond-ii: 360

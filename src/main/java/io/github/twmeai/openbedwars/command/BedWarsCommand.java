@@ -49,6 +49,7 @@ public final class BedWarsCommand implements TabExecutor {
             case "stop" -> stop(sender, args);
             case "reload" -> reload(sender);
             case "setup" -> setup(sender, args);
+            case "party" -> party(sender, args);
             case "shop" -> openShop(sender);
             case "upgrades" -> openUpgrades(sender);
             default -> messages.send(sender, "error.unknown-command");
@@ -93,16 +94,7 @@ public final class BedWarsCommand implements TabExecutor {
             messages.send(player, "error.arena-not-found", MessageService.text("arena", args[1]));
             return;
         }
-        Arena.JoinResult result = arenas.join(player, arena);
-        switch (result) {
-            case SUCCESS -> messages.send(player, "arena.joined",
-                    MessageService.text("arena", arena.displayName()),
-                    MessageService.number("current", arena.playerCount()),
-                    MessageService.number("maximum", arena.maxPlayers()));
-            case ALREADY_JOINED -> messages.send(player, "error.already-in-arena");
-            case FULL -> messages.send(player, "error.arena-full");
-            case RUNNING -> messages.send(player, "error.arena-running");
-        }
+        plugin.partyService().joinArena(player, arena);
     }
 
     private void leave(CommandSender sender) {
@@ -182,6 +174,13 @@ public final class BedWarsCommand implements TabExecutor {
         }
     }
 
+    private void party(CommandSender sender, String[] args) {
+        Player player = requirePlayer(sender);
+        if (player != null) {
+            plugin.partyService().execute(player, args, 1);
+        }
+    }
+
     private void openShop(CommandSender sender) {
         Player player = requirePlayer(sender);
         if (player != null) {
@@ -239,7 +238,7 @@ public final class BedWarsCommand implements TabExecutor {
             @NotNull String[] args
     ) {
         if (args.length == 1) {
-            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "stats", "language", "shop", "upgrades"));
+            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "stats", "language", "party", "shop", "upgrades"));
             if (sender.hasPermission("openbedwars.admin")) {
                 commands.addAll(List.of("start", "stop", "reload", "setup"));
             }
@@ -256,6 +255,9 @@ public final class BedWarsCommand implements TabExecutor {
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("setup") && sender.hasPermission("openbedwars.admin")) {
             return plugin.arenaSetupService().tabComplete(args);
+        }
+        if (args.length >= 2 && args[0].equalsIgnoreCase("party") && sender instanceof Player player) {
+            return plugin.partyService().tabComplete(player, args, 1);
         }
         return List.of();
     }

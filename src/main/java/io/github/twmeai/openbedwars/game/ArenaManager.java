@@ -12,6 +12,7 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -57,6 +58,37 @@ public final class ArenaManager {
             playerArenas.put(player.getUniqueId(), arena);
         }
         return result;
+    }
+
+    public Arena.JoinResult joinGroup(List<Player> players, Arena arena) {
+        List<Player> group = List.copyOf(players);
+        if (group.stream().anyMatch(player -> playerArenas.containsKey(player.getUniqueId()))) {
+            return Arena.JoinResult.ALREADY_JOINED;
+        }
+        if (arena.phase() == GamePhase.RUNNING || arena.phase() == GamePhase.ENDING) {
+            return Arena.JoinResult.RUNNING;
+        }
+        if (!arena.canAccept(group.size())) {
+            return Arena.JoinResult.FULL;
+        }
+
+        java.util.ArrayList<Player> joined = new java.util.ArrayList<>();
+        TeamColor preferred = arena.preferredTeam(Math.min(group.size(), arena.definition().playersPerTeam()));
+        for (int index = 0; index < group.size(); index++) {
+            Player player = group.get(index);
+            Arena.JoinResult result = arena.join(player, preferred);
+            if (result != Arena.JoinResult.SUCCESS) {
+                for (Player rollback : joined) arena.leave(rollback, false);
+                return result;
+            }
+            playerArenas.put(player.getUniqueId(), arena);
+            joined.add(player);
+            if (arena.teamOf(player.getUniqueId()).map(TeamState::size).orElse(0) >= arena.definition().playersPerTeam()) {
+                int remaining = group.size() - index - 1;
+                preferred = arena.preferredTeam(Math.min(remaining, arena.definition().playersPerTeam()));
+            }
+        }
+        return Arena.JoinResult.SUCCESS;
     }
 
     public boolean leave(Player player, boolean notify) {

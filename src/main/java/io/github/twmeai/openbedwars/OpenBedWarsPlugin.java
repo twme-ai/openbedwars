@@ -1,6 +1,7 @@
 package io.github.twmeai.openbedwars;
 
 import io.github.twmeai.openbedwars.command.BedWarsCommand;
+import io.github.twmeai.openbedwars.command.PartyCommand;
 import io.github.twmeai.openbedwars.config.ArenaSetupService;
 import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.listener.GameListener;
@@ -9,6 +10,7 @@ import io.github.twmeai.openbedwars.shop.ShopService;
 import io.github.twmeai.openbedwars.shop.UpgradeService;
 import io.github.twmeai.openbedwars.special.SpecialItemService;
 import io.github.twmeai.openbedwars.statistics.StatisticsService;
+import io.github.twmeai.openbedwars.party.PartyService;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
@@ -22,6 +24,7 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
     private SpecialItemService specialItemService;
     private StatisticsService statisticsService;
     private ArenaSetupService arenaSetupService;
+    private PartyService partyService;
 
     @Override
     public void onEnable() {
@@ -31,12 +34,16 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         statisticsService = new StatisticsService(this);
         arenaManager = new ArenaManager(this);
         arenaSetupService = new ArenaSetupService(this, arenaManager);
+        partyService = new PartyService(this, arenaManager);
         shopService = new ShopService(this, arenaManager);
         upgradeService = new UpgradeService(this, arenaManager);
         specialItemService = new SpecialItemService(this, arenaManager);
         BedWarsCommand command = new BedWarsCommand(this, arenaManager);
         Objects.requireNonNull(getCommand("bedwars"), "bedwars command").setExecutor(command);
         Objects.requireNonNull(getCommand("bedwars"), "bedwars command").setTabCompleter(command);
+        PartyCommand partyCommand = new PartyCommand(this);
+        Objects.requireNonNull(getCommand("party"), "party command").setExecutor(partyCommand);
+        Objects.requireNonNull(getCommand("party"), "party command").setTabCompleter(partyCommand);
         getServer().getPluginManager().registerEvents(new GameListener(this, arenaManager), this);
         getServer().getPluginManager().registerEvents(shopService, this);
         getServer().getPluginManager().registerEvents(upgradeService, this);
@@ -53,6 +60,9 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
         }
         if (statisticsService != null) {
             statisticsService.close();
+        }
+        if (partyService != null) {
+            partyService.shutdown();
         }
     }
 
@@ -78,6 +88,10 @@ public final class OpenBedWarsPlugin extends JavaPlugin {
 
     public ArenaSetupService arenaSetupService() {
         return arenaSetupService;
+    }
+
+    public PartyService partyService() {
+        return partyService;
     }
 
     private void saveResourceIfMissing(String path) {

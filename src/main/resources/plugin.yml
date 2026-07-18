@@ -10,6 +10,10 @@ commands:
     description: Main OpenBedWars command.
     usage: /bedwars help
     aliases: [bw]
+  party:
+    description: Manage an OpenBedWars party.
+    usage: /party help
+    aliases: [p]
 permissions:
   openbedwars.play:
     description: Allows players to join and leave arenas.
