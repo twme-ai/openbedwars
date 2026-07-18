@@ -32,3 +32,7 @@ The official Hypixel Wiki returned a Cloudflare security challenge to both direc
 ## Runtime verification
 
 Paper 1.21.11 build 132 was downloaded from the [Paper Downloads API](https://fill.papermc.io/v3/projects/paper/versions/1.21.11/builds). On 2026-07-18 the plugin loaded on that server, generated its resources, executed `bw list` and `bw reload`, and disabled cleanly without a plugin exception.
+
+A two-client end-to-end run was then completed on the same server. Both clients joined a configured arena, passed through the countdown, received separate teams and starter kits, and entered the running phase. One client destroyed the opposing bed; the opposing player was then killed, received a final elimination, and the surviving team won. After the ending phase, both players were restored to their pre-game position and state. Server-side block assertions confirmed that both beds had been restored by the arena rollback, while `bw stats` and `bw leaderboard wins` confirmed that the game result and bed statistic were persisted to SQLite.
+
+This run validates one complete standard match path. It is not a substitute for long-running soak tests or exhaustive interaction tests for every shop item, special item, reconnect timing, and party transition.

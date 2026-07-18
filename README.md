@@ -48,7 +48,7 @@ Implemented in the current development build:
 - Asynchronous top-10 leaderboards for wins, kills, final kills, beds, and level
 - Game block, liquid, container, entity, and inventory cleanup without replacing the arena world
 
-Still planned before the first stable release: broader automated event tests and multi-client soak testing. Exact behavior sources and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
+The core match loop has also been exercised with two real clients on Paper 1.21.11, including countdown, team placement, bed destruction, final elimination, victory, player restoration, persistent statistics, and arena rollback. Still planned before the first stable release: broader automated event tests and long-running multi-client soak testing. Exact behavior sources, runtime verification, and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
 
 ## License
 
