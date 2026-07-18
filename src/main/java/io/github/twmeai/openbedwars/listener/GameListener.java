@@ -34,6 +34,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
@@ -351,7 +352,13 @@ public final class GameListener implements Listener {
                 && event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
             return;
         }
-        arenas.arenaOf(event.getPlayer()).ifPresent(arena -> arena.handleMovement(event.getPlayer()));
+        arenas.arenaOf(event.getPlayer()).ifPresent(arena -> arena.handleMovement(event.getPlayer(), event.getTo()));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void onTeleport(PlayerTeleportEvent event) {
+        if (event.getTo() == null) return;
+        arenas.arenaOf(event.getPlayer()).ifPresent(arena -> arena.handleMovement(event.getPlayer(), event.getTo()));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

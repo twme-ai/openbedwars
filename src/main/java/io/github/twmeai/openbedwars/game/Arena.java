@@ -88,9 +88,9 @@ public final class Arena {
     private final List<Entity> spawnedEntities = new ArrayList<>();
     private final Set<BukkitTask> respawnTasks = new HashSet<>();
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
-    private final Map<String, Long> trapCooldownUntil = new HashMap<>();
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
+    private final EnemyBaseEntryTracker enemyBaseEntries = new EnemyBaseEntryTracker();
     private final Map<UUID, TeamColor> dragonTeams = new HashMap<>();
     private final RespawnProtectionTracker respawnProtection = new RespawnProtectionTracker();
     private final PlayerCooldownTracker fireballCooldowns = new PlayerCooldownTracker();
@@ -197,6 +197,7 @@ public final class Arena {
 
     public void grantTrapImmunity(Player player, Duration duration) {
         trapImmuneUntil.put(player.getUniqueId(), System.currentTimeMillis() + duration.toMillis());
+        enemyBaseEntries.remove(player.getUniqueId());
     }
 
     public void recordHit(Player victim, Player attacker) {
@@ -387,18 +388,22 @@ public final class Arena {
         }
     }
 
-    public void handleMovement(Player intruder) {
+    public void handleMovement(Player intruder, Location destination) {
         PlayerState intruderState = players.get(intruder.getUniqueId());
         if (intruderState == null) {
             return;
         }
-        if (definition.isVoid(intruder.getLocation().getY())) {
+        if (destination.getWorld() != world) {
+            enemyBaseEntries.remove(intruder.getUniqueId());
+            return;
+        }
+        if (definition.isVoid(destination.getY())) {
             if (phase == GamePhase.RUNNING && !intruderState.eliminated() && !intruderState.respawning()) {
                 intruder.damage(1000.0, DamageSource.builder(VOID_DAMAGE_TYPE)
-                        .withDamageLocation(intruder.getLocation())
+                        .withDamageLocation(destination)
                         .build());
             } else {
-                Location destination = switch (phase) {
+                Location safeDestination = switch (phase) {
                     case WAITING, STARTING -> definition.lobby().toLocation(world);
                     case RUNNING -> intruderState.eliminated()
                             ? definition.spectator().toLocation(world)
@@ -406,30 +411,37 @@ public final class Arena {
                     case ENDING -> definition.spectator().toLocation(world);
                 };
                 intruder.setFallDistance(0);
-                intruder.teleportAsync(destination);
+                intruder.teleportAsync(safeDestination);
             }
             return;
         }
         if (phase != GamePhase.RUNNING || intruderState.eliminated() || intruderState.respawning()) {
             return;
         }
-        if (trapImmuneUntil.getOrDefault(intruder.getUniqueId(), 0L) > System.currentTimeMillis()) {
-            return;
-        }
+        UUID intruderId = intruder.getUniqueId();
+        boolean trapImmune = trapImmuneUntil.getOrDefault(intruderId, 0L) > System.currentTimeMillis();
         for (TeamState defenders : teams.values()) {
-            if (defenders.color() == intruderState.team() || defenders.traps().isEmpty() || !defenders.isAlive(players)) {
+            if (defenders.color() == intruderState.team()) {
+                enemyBaseEntries.leave(intruderId, defenders.color());
                 continue;
             }
-            if (intruder.getLocation().distanceSquared(defenders.definition().spawn().toLocation(world)) > 7 * 7) {
+            boolean inside = destination
+                    .distanceSquared(defenders.definition().spawn().toLocation(world)) <= 7 * 7;
+            if (!inside) {
+                enemyBaseEntries.leave(intruderId, defenders.color());
                 continue;
             }
-            String cooldownKey = intruder.getUniqueId() + ":" + defenders.color();
-            long now = System.currentTimeMillis();
-            if (trapCooldownUntil.getOrDefault(cooldownKey, 0L) > now) {
+            if (trapImmune) {
+                enemyBaseEntries.leave(intruderId, defenders.color());
+                continue;
+            }
+            if (!enemyBaseEntries.enter(intruderId, defenders.color())
+                    || !defenders.bedAlive()
+                    || defenders.traps().isEmpty()
+                    || !defenders.isAlive(players)) {
                 continue;
             }
             TrapType trap = defenders.traps().poll();
-            trapCooldownUntil.put(cooldownKey, now + 10_000L);
             applyTrap(trap, intruder, defenders);
             for (UUID memberId : defenders.members()) {
                 Player member = Bukkit.getPlayer(memberId);
@@ -550,6 +562,7 @@ public final class Arena {
         TeamState team = teams.get(state.team());
         team.removeMember(player.getUniqueId());
         cancelDisconnectTask(player.getUniqueId());
+        enemyBaseEntries.remove(player.getUniqueId());
         lastHits.remove(player.getUniqueId());
         respawnProtection.remove(player.getUniqueId());
         fireballCooldowns.remove(player.getUniqueId());
@@ -580,6 +593,7 @@ public final class Arena {
             return leave(player, false);
         }
         state.disconnected(true);
+        enemyBaseEntries.remove(player.getUniqueId());
         cancelDisconnectTask(player.getUniqueId());
         broadcast("arena.player-disconnected",
                 MessageService.text("player", player.getName()),
@@ -711,6 +725,7 @@ public final class Arena {
         TeamState victimTeam = teams.get(victimState.team());
         PlayerState killerState = killer == null ? null : players.get(killer.getUniqueId());
         lastHits.remove(victim.getUniqueId());
+        enemyBaseEntries.remove(victim.getUniqueId());
         respawnProtection.remove(victim.getUniqueId());
         revealInvisibility(victim);
         boolean finalDeath = !victimTeam.bedAlive();
@@ -826,7 +841,7 @@ public final class Arena {
         elapsedSeconds = 0;
         statsRecorded = false;
         generatorClocks.clear();
-        trapCooldownUntil.clear();
+        enemyBaseEntries.clear();
         for (TeamState team : teams.values()) {
             team.restoreBed();
         }
@@ -1225,6 +1240,7 @@ public final class Arena {
         players.remove(state.playerId());
         teams.get(state.team()).removeMember(state.playerId());
         state.eliminated(true);
+        enemyBaseEntries.remove(state.playerId());
         respawnProtection.remove(state.playerId());
         fireballCooldowns.remove(state.playerId());
         invisiblePlayers.remove(state.playerId());
@@ -1353,9 +1369,9 @@ public final class Arena {
         teams.values().forEach(TeamState::reset);
         generatorClocks.clear();
         generatorDisplays.clear();
-        trapCooldownUntil.clear();
         lastHits.clear();
         trapImmuneUntil.clear();
+        enemyBaseEntries.clear();
         respawnProtection.clear();
         fireballCooldowns.clear();
         scoreboards.clear();

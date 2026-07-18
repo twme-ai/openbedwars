@@ -118,6 +118,12 @@ The defaults reproduce the familiar half-second cooldown and Slowness IV after a
 
 Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired projectiles are registered to their arena and removed during reset. Placed TNT is primed immediately, attributed to its placer, and included in the same cleanup so it cannot explode after a forced stop.
 
+## Traps
+
+An enemy crossing into the seven-block radius around a team spawn consumes the first trap in that team's ordered queue. Remaining inside the radius does not consume another trap: the enemy must leave and enter again. Queued traps become inactive when the team's bed is destroyed.
+
+Magic Milk suppresses enemy-base entries for 30 seconds. A protected player can cross or move within a base without consuming a trap; if the effect expires while the player is still inside, their next movement can trigger the first queued trap.
+
 ## Sudden Death
 
 The `events.sudden-death` time releases one dragon for every team that has not been eliminated. A team that purchased Dragon Buff releases two. Each dragon belongs to that team, continually selects the nearest active enemy, and cannot damage its own players directly or through a dragon fireball.
