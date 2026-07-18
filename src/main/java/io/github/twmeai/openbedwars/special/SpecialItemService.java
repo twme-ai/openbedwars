@@ -79,7 +79,6 @@ public final class SpecialItemService implements Listener {
         if (arena == null) return;
         LaunchedUtility utility = new LaunchedUtility(type, player.getUniqueId(), arena);
         launchedUtilities.put(projectile.getUniqueId(), utility);
-        arena.trackEntity(projectile);
         if (type.equals("bridge_egg")) {
             startBridgeEgg(projectile, player, arena);
         }

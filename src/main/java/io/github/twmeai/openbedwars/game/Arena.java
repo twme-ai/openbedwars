@@ -88,6 +88,7 @@ public final class Arena {
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
     private final RespawnProtectionTracker respawnProtection = new RespawnProtectionTracker();
+    private final PlayerCooldownTracker fireballCooldowns = new PlayerCooldownTracker();
     private final Set<UUID> invisiblePlayers = new HashSet<>();
 
     private GamePhase phase = GamePhase.WAITING;
@@ -205,6 +206,11 @@ public final class Arena {
 
     public void removeRespawnProtection(Player player) {
         respawnProtection.remove(player.getUniqueId());
+    }
+
+    public boolean tryUseFireball(Player player, long nowNanos) {
+        return fireballCooldowns.tryAcquire(
+                player.getUniqueId(), nowNanos, settings.fireballs().cooldownTicks());
     }
 
     public void handleInvisibilityChange(Player player, boolean invisible) {
@@ -525,6 +531,7 @@ public final class Arena {
         cancelDisconnectTask(player.getUniqueId());
         lastHits.remove(player.getUniqueId());
         respawnProtection.remove(player.getUniqueId());
+        fireballCooldowns.remove(player.getUniqueId());
         lastHits.entrySet().removeIf(entry -> entry.getValue().attacker().equals(player.getUniqueId()));
         cancelRespawnTasksFor(player.getUniqueId());
         playerRelease.accept(player.getUniqueId(), state.snapshot());
@@ -1153,6 +1160,7 @@ public final class Arena {
         teams.get(state.team()).removeMember(state.playerId());
         state.eliminated(true);
         respawnProtection.remove(state.playerId());
+        fireballCooldowns.remove(state.playerId());
         invisiblePlayers.remove(state.playerId());
         plugin.spectatorService().release(state.playerId());
         playerRelease.accept(state.playerId(), state.snapshot());
@@ -1277,6 +1285,7 @@ public final class Arena {
         lastHits.clear();
         trapImmuneUntil.clear();
         respawnProtection.clear();
+        fireballCooldowns.clear();
         scoreboards.clear();
         elapsedSeconds = 0;
         countdown = 0;

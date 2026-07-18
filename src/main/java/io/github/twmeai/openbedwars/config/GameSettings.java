@@ -22,7 +22,8 @@ public record GameSettings(
         EventSchedule eventSchedule,
         GeneratorPeriods generatorPeriods,
         GeneratorDisplaySettings generatorDisplays,
-        GeneratorSplitSettings generatorSplitting
+        GeneratorSplitSettings generatorSplitting,
+        FireballSettings fireballs
 ) {
     public GameSettings {
         if (minimumPlayers < 2 || countdownSeconds < 1 || respawnSeconds < 0 || respawnProtectionSeconds < 0
@@ -67,6 +68,10 @@ public record GameSettings(
                         config.getBoolean("generator-splitting.enabled", true),
                         config.getDouble("generator-splitting.radius", 3.0),
                         splitResources(config)
+                ),
+                new FireballSettings(
+                        config.getInt("fireballs.cooldown-ticks", 10),
+                        config.getInt("fireballs.slowness-amplifier", 3)
                 )
         );
     }
@@ -149,6 +154,15 @@ public record GameSettings(
 
         public boolean splits(ResourceType type) {
             return enabled && resources.contains(type);
+        }
+    }
+
+    public record FireballSettings(int cooldownTicks, int slownessAmplifier) {
+        public FireballSettings {
+            if (cooldownTicks < 0 || cooldownTicks > 1_200
+                    || slownessAmplifier < 0 || slownessAmplifier > 255) {
+                throw new IllegalArgumentException("Invalid fireball cooldown configuration");
+            }
         }
     }
 }

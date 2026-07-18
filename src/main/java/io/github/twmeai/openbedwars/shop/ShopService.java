@@ -28,6 +28,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -368,7 +369,8 @@ public final class ShopService implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onFireball(PlayerInteractEvent event) {
-        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+        if (event.getHand() != EquipmentSlot.HAND
+                || event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
         ItemStack item = event.getItem();
@@ -380,6 +382,21 @@ public final class ShopService implements Listener {
             return;
         }
         event.setCancelled(true);
+        if (!arena.tryUseFireball(event.getPlayer(), System.nanoTime())) {
+            return;
+        }
+        int cooldownTicks = arena.settings().fireballs().cooldownTicks();
+        event.getPlayer().setCooldown(item, cooldownTicks);
+        if (cooldownTicks > 0) {
+            event.getPlayer().addPotionEffect(new PotionEffect(
+                    PotionEffectType.SLOWNESS,
+                    cooldownTicks,
+                    arena.settings().fireballs().slownessAmplifier(),
+                    false,
+                    false,
+                    false
+            ));
+        }
         item.setAmount(item.getAmount() - 1);
         Fireball fireball = event.getPlayer().launchProjectile(Fireball.class);
         fireball.setYield(2.0f);

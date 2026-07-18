@@ -7,6 +7,11 @@ respawn-protection-seconds: 3
 ending-seconds: 10
 reconnect-grace-seconds: 120
 
+# Hypixel applies a half-second item cooldown and Slowness IV after a throw.
+fireballs:
+  cooldown-ticks: 10
+  slowness-amplifier: 3
+
 progression:
   experience-per-minute: 25
   win-bonus-experience: 100

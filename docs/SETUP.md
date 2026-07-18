@@ -104,6 +104,20 @@ respawn-protection-seconds: 3
 
 After the respawn countdown, a player ignores non-void damage for the configured protection time. Hitting an enemy immediately removes the attacker's protection, while void damage always remains lethal. Set `respawn-protection-seconds` to `0` to disable the window. Protection is removed on death, arena leave, reconnect expiry, and match reset.
 
+## Fireballs
+
+Fireball pacing is configured globally in `config.yml`:
+
+```yaml
+fireballs:
+  cooldown-ticks: 10
+  slowness-amplifier: 3
+```
+
+The defaults reproduce the familiar half-second cooldown and Slowness IV after a successful throw. The server enforces the deadline independently of client packets and also sends the native fire-charge cooldown overlay. Attempts during the cooldown do not consume another fireball. Set `cooldown-ticks` to `0` to disable both the cooldown and throw slowness.
+
+Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired projectiles are registered to their arena and removed during reset. Placed TNT is primed immediately, attributed to its placer, and included in the same cleanup so it cannot explode after a forced stop.
+
 ## Invisibility
 
 The item-shop invisibility potion keeps the player's real armor equipped while hiding all four armor slots from active enemies. The player, teammates, and spectators continue to receive the real equipment, so armor protection and permanent upgrades remain unchanged. Held items and potion or movement particles are still visible.

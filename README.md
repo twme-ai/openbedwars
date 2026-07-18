@@ -42,7 +42,7 @@ Implemented in the current development build:
 - Capped iron, gold, diamond, and emerald generators with timed tiers, forge upgrades, rotating displays, and same-team resource splitting
 - Hypixel-style Quick Buy and item shop categories, permanent armor and shears, tiered tools, potions with enemy-hidden armor, and utilities
 - Team upgrades, an ordered three-trap queue, heal pool, and Dragon Buff
-- Working Fireballs, Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers
+- Cooldown-limited Fireballs plus working Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers
 - Per-player MiniMessage locales, English and Traditional Chinese translations, and localized scoreboards
 - Asynchronous SQLite statistics for games, wins/losses, kills, final kills/deaths, beds, XP, and Bed Wars levels
 - Automatic same-game reconnect with a configurable grace period and delayed snapshot restoration
