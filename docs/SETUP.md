@@ -158,6 +158,10 @@ The defaults reproduce the familiar half-second cooldown and Slowness IV after a
 
 Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired projectiles are registered to their arena and removed during reset. Placed TNT is primed immediately, attributed to its placer, and included in the same cleanup so it cannot explode after a forced stop.
 
+## Pop-up Towers
+
+Before consuming a Compact Pop-up Tower, OpenBedWars validates all 116 planned wool and ladder positions. The complete structure must fit below the build limit, outside protected areas, and without replacing map-owned blocks. If any position fails, no animation starts, no blocks are placed, and the player keeps the item with a localized space warning. Blocks placed during the current match may be replaced and remain part of the normal arena rollback.
+
 ## Team-owned defenders
 
 Bed Bugs and Dream Defenders belong to the team that deployed them. Within 16 blocks they target only active enemy players or an opposing team's defender. Allied, eliminated, respawning, disconnected, and out-of-arena players are not valid targets; those players also cannot damage a defender, and a defender cannot damage them.

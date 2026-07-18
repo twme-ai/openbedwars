@@ -41,7 +41,6 @@ import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Vector;
 
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -122,8 +121,11 @@ public final class SpecialItemService implements Listener {
             spawnDreamDefender(event, arena);
         } else if (type.equals("popup_tower")) {
             event.setCancelled(true);
-            buildPopupTower(event.getPlayer(), arena);
-            consume(item);
+            if (buildPopupTower(event.getPlayer(), arena)) {
+                consume(item);
+            } else {
+                plugin.messages().send(event.getPlayer(), "error.special-placement");
+            }
         }
     }
 
@@ -252,34 +254,23 @@ public final class SpecialItemService implements Listener {
         });
     }
 
-    private void buildPopupTower(Player player, Arena arena) {
+    private boolean buildPopupTower(Player player, Arena arena) {
         BlockFace forward = cardinal(player.getFacing());
         BlockFace right = rightOf(forward);
         Block center = player.getLocation().getBlock().getRelative(forward, 3);
         Material wool = arena.playerState(player.getUniqueId()).orElseThrow().team().wool();
-        List<Placement> placements = new ArrayList<>();
-
-        for (int y = 0; y <= 4; y++) {
-            for (int x = -2; x <= 2; x++) {
-                for (int z = -2; z <= 2; z++) {
-                    if (Math.abs(x) != 2 && Math.abs(z) != 2) continue;
-                    if (z == -2 && x == 0 && y <= 1) continue;
-                    placements.add(new Placement(relative(center, right, forward, x, y, z), wool.createBlockData()));
-                }
-            }
-        }
-        for (int x = -2; x <= 2; x++) {
-            for (int z = -2; z <= 2; z++) {
-                placements.add(new Placement(relative(center, right, forward, x, 5, z), wool.createBlockData()));
-                if ((Math.abs(x) == 2 || Math.abs(z) == 2) && (x + z & 1) == 0) {
-                    placements.add(new Placement(relative(center, right, forward, x, 6, z), wool.createBlockData()));
-                }
-            }
-        }
         Directional ladder = (Directional) Material.LADDER.createBlockData();
         ladder.setFacing(forward.getOppositeFace());
-        for (int y = 0; y <= 4; y++) {
-            placements.add(new Placement(relative(center, right, forward, 0, y, 1), ladder.clone()));
+        List<Placement> placements = PopupTowerBlueprint.blocks().stream()
+                .map(offset -> new Placement(
+                        relative(center, right, forward, offset.right(), offset.y(), offset.forward()),
+                        offset.kind() == PopupTowerBlueprint.Kind.WOOL
+                                ? wool.createBlockData()
+                                : ladder.clone()
+                ))
+                .toList();
+        if (placements.stream().anyMatch(placement -> !arena.canPlaceGeneratedBlock(placement.block()))) {
+            return false;
         }
 
         final int[] index = {0};
@@ -294,6 +285,7 @@ public final class SpecialItemService implements Listener {
                 arena.placeGeneratedBlock(placement.block(), placement.data());
             }
         }, 0L, 1L);
+        return true;
     }
 
     private Block relative(Block center, BlockFace right, BlockFace forward, int x, int y, int z) {

@@ -398,11 +398,16 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         return placeGeneratedBlock(block, material.createBlockData());
     }
 
-    public boolean placeGeneratedBlock(Block block, BlockData data) {
+    public boolean canPlaceGeneratedBlock(Block block) {
         if (phase != GamePhase.RUNNING || !block.getWorld().equals(world)
                 || !definition.canBuildAt(block.getY()) || isProtectedBlock(block)) return false;
         BlockKey key = BlockKey.of(block);
-        if (!block.isEmpty() && !placedBlocks.contains(key)) return false;
+        return block.isEmpty() || placedBlocks.contains(key);
+    }
+
+    public boolean placeGeneratedBlock(Block block, BlockData data) {
+        if (!canPlaceGeneratedBlock(block)) return false;
+        BlockKey key = BlockKey.of(block);
         captureBeforeChange(block);
         placedBlocks.add(key);
         block.setBlockData(data, false);
