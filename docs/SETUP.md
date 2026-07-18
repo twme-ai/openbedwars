@@ -213,6 +213,8 @@ Deletion only removes the `arenas.yml` section. It does not delete the world.
 
 Every item entity spawned in the arena while a match is running or ending is registered once by UUID and marked non-persistent. This includes generator resources, player drops, inventory overflow, broken-block drops, and explosion drops. Arena reset removes any still-loaded items, while a chunk unload cannot save those match-only entities into the world for a later game.
 
+Every arena-tracked entity also carries an OpenBedWars marker. A persistent Dream Defender that unloads during its current match keeps its UUID ownership and resumes normal targeting when the chunk loads again. Arena reset clears that ownership; if a marked entity from the ended match is loaded later, OpenBedWars removes it on the next server tick after Paper completes the chunk-load transition. Plugin startup also removes marked leftovers that are already loaded.
+
 Items that already existed before the match, or that appear while the arena is waiting, are not swept globally. Keep the dedicated arena world clean before enabling it; OpenBedWars restores observed game changes rather than replacing the world from a template.
 
 ## Languages

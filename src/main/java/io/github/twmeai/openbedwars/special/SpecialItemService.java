@@ -214,7 +214,6 @@ public final class SpecialItemService implements Listener {
     private void registerDefender(Mob mob, Arena arena, TeamColor team, Duration lifetime) {
         arena.trackEntity(mob);
         defenders.put(mob.getUniqueId(), new Defender(
-                mob,
                 arena,
                 team,
                 System.currentTimeMillis() + lifetime.toMillis()
@@ -225,24 +224,30 @@ public final class SpecialItemService implements Listener {
         long now = System.currentTimeMillis();
         defenders.entrySet().removeIf(entry -> {
             Defender defender = entry.getValue();
-            if (!defender.mob().isValid() || defender.mob().isDead()
-                    || defender.arena().phase() != GamePhase.RUNNING || defender.expiresAt() <= now) {
-                if (defender.mob().isValid()) defender.mob().remove();
+            if (defender.arena().phase() != GamePhase.RUNNING || defender.expiresAt() <= now) {
+                defender.arena().discardTrackedEntity(entry.getKey());
                 return true;
             }
-            LivingEntity target = defender.mob().getWorld()
-                    .getNearbyEntities(defender.mob().getLocation(),
+            Entity entity = defender.arena().world().getEntity(entry.getKey());
+            if (entity == null) return false;
+            if (!(entity instanceof Mob mob) || !mob.isValid() || mob.isDead()) {
+                defender.arena().discardTrackedEntity(entry.getKey());
+                return true;
+            }
+            LivingEntity target = mob.getWorld()
+                    .getNearbyEntities(mob.getLocation(),
                             DEFENDER_TARGET_RANGE, DEFENDER_TARGET_RANGE, DEFENDER_TARGET_RANGE).stream()
                     .filter(LivingEntity.class::isInstance)
                     .map(LivingEntity.class::cast)
-                    .filter(entity -> entity instanceof Player || defenders.containsKey(entity.getUniqueId()))
-                    .filter(entity -> entity.getLocation().distanceSquared(defender.mob().getLocation())
+                    .filter(candidate -> candidate instanceof Player
+                            || defenders.containsKey(candidate.getUniqueId()))
+                    .filter(candidate -> candidate.getLocation().distanceSquared(mob.getLocation())
                             <= DEFENDER_TARGET_RANGE_SQUARED)
-                    .filter(entity -> isEnemyTarget(defender, entity))
-                    .min(Comparator.comparingDouble(entity ->
-                            entity.getLocation().distanceSquared(defender.mob().getLocation())))
+                    .filter(candidate -> isEnemyTarget(defender, candidate))
+                    .min(Comparator.comparingDouble(candidate ->
+                            candidate.getLocation().distanceSquared(mob.getLocation())))
                     .orElse(null);
-            defender.mob().setTarget(target);
+            mob.setTarget(target);
             return false;
         });
     }
@@ -354,13 +359,13 @@ public final class SpecialItemService implements Listener {
         Defender targetDefender = defenders.get(target.getUniqueId());
         return targetDefender != null && DefenderCombatPolicy.isEnemy(
                 defender.team(), targetDefender.team(), defender.arena() == targetDefender.arena(),
-                targetDefender.mob().isValid() && !targetDefender.mob().isDead());
+                target instanceof LivingEntity living && target.isValid() && !living.isDead());
     }
 
     private record LaunchedUtility(String type, UUID owner, Arena arena) {
     }
 
-    private record Defender(Mob mob, Arena arena, TeamColor team, long expiresAt) {
+    private record Defender(Arena arena, TeamColor team, long expiresAt) {
     }
 
     private record Placement(Block block, BlockData data) {

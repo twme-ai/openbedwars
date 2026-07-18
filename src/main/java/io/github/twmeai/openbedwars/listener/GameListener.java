@@ -1,5 +1,7 @@
 package io.github.twmeai.openbedwars.listener;
 
+import com.destroystokyo.paper.event.entity.EntityAddToWorldEvent;
+import com.destroystokyo.paper.event.entity.EntityRemoveFromWorldEvent;
 import io.github.twmeai.openbedwars.OpenBedWarsPlugin;
 import io.github.twmeai.openbedwars.game.Arena;
 import io.github.twmeai.openbedwars.game.ArenaManager;
@@ -121,6 +123,18 @@ public final class GameListener implements Listener {
         arenas.arenaIn(event.getLocation().getWorld())
                 .filter(arena -> arena.phase() == GamePhase.RUNNING || arena.phase() == GamePhase.ENDING)
                 .ifPresent(arena -> arena.trackTransientEntity(event.getEntity()));
+    }
+
+    @EventHandler
+    public void onEntityAdded(EntityAddToWorldEvent event) {
+        arenas.arenaIn(event.getWorld())
+                .ifPresent(arena -> arena.handleTrackedEntityAdded(event.getEntity()));
+    }
+
+    @EventHandler
+    public void onEntityRemoved(EntityRemoveFromWorldEvent event) {
+        arenas.arenaIn(event.getWorld())
+                .ifPresent(arena -> arena.handleTrackedEntityRemoved(event.getEntity()));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

@@ -79,6 +79,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     private final KitService kits = new KitService();
     private final ScoreboardService scoreboards;
     private final NamespacedKey generatorResourceKey;
+    private final NamespacedKey matchEntityKey;
     private final Map<UUID, PlayerState> players = new LinkedHashMap<>();
     private final EnumMap<TeamColor, TeamState> teams = new EnumMap<>(TeamColor.class);
     private final Map<String, GeneratorClock> generatorClocks = new HashMap<>();
@@ -86,6 +87,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     private final Map<BlockKey, BlockState> changedBlocks = new LinkedHashMap<>();
     private final Set<BlockKey> placedBlocks = new HashSet<>();
     private final Map<UUID, Entity> spawnedEntities = new LinkedHashMap<>();
+    private final Set<UUID> pendingEntityRemovals = new HashSet<>();
     private final RespawnCountdownTracker<BukkitTask> respawnCountdowns =
             new RespawnCountdownTracker<>(BukkitTask::cancel);
     private final Map<UUID, BukkitTask> disconnectTasks = new HashMap<>();
@@ -120,6 +122,8 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         this.playerRelease = playerRelease;
         this.scoreboards = new ScoreboardService(messages);
         this.generatorResourceKey = new NamespacedKey(plugin, "generator_resource");
+        this.matchEntityKey = new NamespacedKey(plugin, "match_entity");
+        removeOrphanedMatchEntities();
         definition.teams().values().stream()
                 .sorted(Comparator.comparing(team -> team.color().ordinal()))
                 .forEach(team -> teams.put(team.color(), new TeamState(team)));
@@ -256,12 +260,41 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     }
 
     public void trackEntity(Entity entity) {
+        entity.getPersistentDataContainer().set(matchEntityKey, PersistentDataType.BYTE, (byte) 1);
         spawnedEntities.put(entity.getUniqueId(), entity);
     }
 
     public void trackTransientEntity(Entity entity) {
         entity.setPersistent(false);
         trackEntity(entity);
+    }
+
+    public void handleTrackedEntityAdded(Entity entity) {
+        if (!isMatchEntity(entity)) return;
+        UUID entityId = entity.getUniqueId();
+        if (spawnedEntities.containsKey(entityId)) {
+            spawnedEntities.put(entityId, entity);
+            return;
+        }
+        if (!pendingEntityRemovals.add(entityId)) return;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            pendingEntityRemovals.remove(entityId);
+            Entity loaded = world.getEntity(entityId);
+            if (loaded != null && isMatchEntity(loaded) && !spawnedEntities.containsKey(entityId)) {
+                loaded.remove();
+            }
+        });
+    }
+
+    public void handleTrackedEntityRemoved(Entity entity) {
+        if (isMatchEntity(entity) && (!entity.isPersistent() || entity.isDead())) {
+            spawnedEntities.remove(entity.getUniqueId());
+        }
+    }
+
+    public void discardTrackedEntity(UUID entityId) {
+        Entity entity = spawnedEntities.remove(entityId);
+        if (entity != null && entity.isValid()) entity.remove();
     }
 
     public boolean isArenaDragon(Entity entity) {
@@ -1424,6 +1457,17 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
 
     private void captureBeforeChange(Block block) {
         changedBlocks.putIfAbsent(BlockKey.of(block), block.getState());
+    }
+
+    private boolean isMatchEntity(Entity entity) {
+        return entity.getPersistentDataContainer().has(matchEntityKey, PersistentDataType.BYTE);
+    }
+
+    private void removeOrphanedMatchEntities() {
+        world.getEntities().stream()
+                .filter(this::isMatchEntity)
+                .toList()
+                .forEach(Entity::remove);
     }
 
     private boolean isProtectedBlock(Block block) {
