@@ -31,6 +31,11 @@ class SqliteStatsRepositoryTest {
             assertEquals(5, statistics.deaths());
             assertEquals(350, statistics.experience());
             assertTrue(repository.findByName("exampleplayer").join().isPresent());
+
+            PlayerIdentity rival = new PlayerIdentity(UUID.randomUUID(), "Rival");
+            repository.apply(Map.of(rival, new StatsDelta(2, 2, 0, 1, 0, 0, 0, 0, 300))).join();
+            assertEquals("Rival", repository.top(LeaderboardMetric.WINS, 10).join().getFirst().name());
+            assertEquals("ExamplePlayer", repository.top(LeaderboardMetric.KILLS, 1).join().getFirst().name());
         }
     }
 }

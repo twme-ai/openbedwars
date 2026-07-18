@@ -8,6 +8,7 @@ import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
@@ -42,6 +43,29 @@ public final class StatisticsService {
                 plugin.messages().send(sender, "error.stats-not-found", MessageService.text("player", name));
             } else {
                 display(sender, statistics.orElseThrow());
+            }
+        }));
+    }
+
+    public void showLeaderboard(CommandSender sender, LeaderboardMetric metric, int limit) {
+        repository.top(metric, limit).whenComplete((entries, failure) -> runOnMain(sender, () -> {
+            if (failure != null) {
+                plugin.getLogger().log(Level.SEVERE, "Could not load the Bed Wars leaderboard", failure);
+                plugin.messages().send(sender, "error.database");
+                return;
+            }
+            plugin.messages().send(sender, "leaderboard.header",
+                    MessageService.component("metric", plugin.messages().render(sender, metric.translationKey())));
+            if (entries.isEmpty()) {
+                sender.sendMessage(plugin.messages().render(sender, "leaderboard.empty"));
+                return;
+            }
+            for (int index = 0; index < entries.size(); index++) {
+                PlayerStatistics entry = entries.get(index);
+                sender.sendMessage(plugin.messages().render(sender, "leaderboard.line",
+                        MessageService.number("rank", index + 1),
+                        MessageService.text("player", entry.name()),
+                        MessageService.text("value", Long.toString(metric.value(entry)))));
             }
         }));
     }

@@ -45,9 +45,10 @@ Implemented in the current development build:
 - Asynchronous SQLite statistics for games, wins/losses, kills, final kills/deaths, beds, XP, and Bed Wars levels
 - Automatic same-game reconnect with a configurable grace period and delayed snapshot restoration
 - Hypixel-style parties with expiring invites, leadership, moderation, chat, and atomic arena joining
+- Asynchronous top-10 leaderboards for wins, kills, final kills, beds, and level
 - Game block, liquid, container, entity, and inventory cleanup without replacing the arena world
 
-Still planned before the first stable release: leaderboards, broader automated event tests, and multi-client soak testing. Exact behavior sources and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
+Still planned before the first stable release: broader automated event tests and multi-client soak testing. Exact behavior sources and known research limitations are tracked in [docs/RESEARCH.md](docs/RESEARCH.md).
 
 ## License
 

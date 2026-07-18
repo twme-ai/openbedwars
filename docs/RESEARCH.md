@@ -17,6 +17,7 @@ This document records the behavior sources consulted before implementation. Open
 - [BedWars1058 setup commands](https://github.com/andrei1058/BedWars1058/tree/master/bedwars-plugin/src/main/java/com/andrei1058/bedwars/commands/bedwars/subcmds/sensitive/setup): cross-reference for waiting/spectator positions, team creation, spawns, beds, item/upgrade shops, and generators as the minimum arena setup workflow.
 - [BedWars1058 arena feature documentation](https://github.com/andrei1058/BedWars1058/wiki/Arena-Setup): cross-reference for configurable rejoin support that returns disconnected players to an active game.
 - [SBA party implementation](https://github.com/pronze/SBA/tree/master/plugin/src/main/java/pronze/hypixelify/commands/party): reference for the Hypixel-style invite, accept, decline, leader, kick, promote, leave, disband, chat, size-limit, and expiring-invitation workflow.
+- [Screaming BedWars leaderboard API](https://github.com/ScreamingSandals/BedWars/blob/master/api/src/main/java/org/screamingsandals/bedwars/api/statistics/PlayerStatisticsManager.java): reference for count-limited, descending persistent-statistic leaderboards.
 
 ## Initial behavior target
 

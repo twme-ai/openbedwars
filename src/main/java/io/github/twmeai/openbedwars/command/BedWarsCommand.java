@@ -5,6 +5,7 @@ import io.github.twmeai.openbedwars.game.Arena;
 import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.game.GamePhase;
 import io.github.twmeai.openbedwars.message.MessageService;
+import io.github.twmeai.openbedwars.statistics.LeaderboardMetric;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -45,6 +46,7 @@ public final class BedWarsCommand implements TabExecutor {
             case "leave" -> leave(sender);
             case "language", "lang" -> language(sender, args);
             case "stats" -> statistics(sender, args);
+            case "leaderboard", "top" -> leaderboard(sender, args);
             case "start" -> start(sender, args);
             case "stop" -> stop(sender, args);
             case "reload" -> reload(sender);
@@ -125,6 +127,17 @@ public final class BedWarsCommand implements TabExecutor {
         } else {
             messages.send(sender, "error.player-only");
         }
+    }
+
+    private void leaderboard(CommandSender sender, String[] args) {
+        LeaderboardMetric metric = args.length >= 2
+                ? LeaderboardMetric.fromKey(args[1]).orElse(null)
+                : LeaderboardMetric.WINS;
+        if (metric == null) {
+            messages.send(sender, "leaderboard.invalid");
+            return;
+        }
+        plugin.statisticsService().showLeaderboard(sender, metric, 10);
     }
 
     private void start(CommandSender sender, String[] args) {
@@ -238,7 +251,7 @@ public final class BedWarsCommand implements TabExecutor {
             @NotNull String[] args
     ) {
         if (args.length == 1) {
-            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "stats", "language", "party", "shop", "upgrades"));
+            List<String> commands = new ArrayList<>(List.of("help", "list", "join", "leave", "stats", "leaderboard", "language", "party", "shop", "upgrades"));
             if (sender.hasPermission("openbedwars.admin")) {
                 commands.addAll(List.of("start", "stop", "reload", "setup"));
             }
@@ -252,6 +265,9 @@ public final class BedWarsCommand implements TabExecutor {
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("stats")) {
             return matches(org.bukkit.Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[1]);
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("leaderboard") || args[0].equalsIgnoreCase("top"))) {
+            return matches(java.util.Arrays.stream(LeaderboardMetric.values()).map(LeaderboardMetric::key).toList(), args[1]);
         }
         if (args.length >= 2 && args[0].equalsIgnoreCase("setup") && sender.hasPermission("openbedwars.admin")) {
             return plugin.arenaSetupService().tabComplete(args);

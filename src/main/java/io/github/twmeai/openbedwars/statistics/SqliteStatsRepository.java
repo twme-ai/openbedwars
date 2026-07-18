@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -98,6 +100,23 @@ public final class SqliteStatsRepository implements StatsRepository {
                 } catch (SQLException exception) {
                     connection.rollback();
                     throw exception;
+                }
+            }
+        });
+    }
+
+    @Override
+    public CompletableFuture<List<PlayerStatistics>> top(LeaderboardMetric metric, int limit) {
+        int safeLimit = Math.max(1, Math.min(100, limit));
+        return supply(() -> {
+            String sql = "SELECT * FROM player_stats ORDER BY " + metric.column()
+                    + " DESC, wins DESC, last_name COLLATE NOCASE ASC LIMIT ?";
+            try (Connection connection = connect(); PreparedStatement statement = connection.prepareStatement(sql)) {
+                statement.setInt(1, safeLimit);
+                try (ResultSet result = statement.executeQuery()) {
+                    List<PlayerStatistics> entries = new ArrayList<>();
+                    while (result.next()) entries.add(map(result));
+                    return List.copyOf(entries);
                 }
             }
         });
