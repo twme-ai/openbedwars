@@ -19,6 +19,7 @@ import java.util.logging.Level;
 public final class ArenaManager {
     private final OpenBedWarsPlugin plugin;
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
+    private final ExclusiveArenaWorlds<Arena> arenaWorlds = new ExclusiveArenaWorlds<>();
     private final Map<UUID, Arena> playerArenas = new java.util.HashMap<>();
     private final Map<UUID, PlayerSnapshot> pendingRestores = new java.util.HashMap<>();
     private BukkitTask ticker;
@@ -50,7 +51,7 @@ public final class ArenaManager {
     }
 
     public Optional<Arena> arenaIn(World world) {
-        return arenas.values().stream().filter(arena -> arena.world().equals(world)).findFirst();
+        return arenaWorlds.owner(world.getUID());
     }
 
     public boolean hasActiveGames() {
@@ -140,7 +141,18 @@ public final class ArenaManager {
                         + definition.worldName() + "' is not loaded");
                 continue;
             }
-            arenas.put(definition.key(), new Arena(plugin, definition, settings, world, this::releasePlayer));
+            Arena owner = arenaWorlds.owner(world.getUID()).orElse(null);
+            if (owner != null) {
+                plugin.getLogger().severe("Arena '" + definition.key() + "' skipped: world '"
+                        + definition.worldName() + "' is already assigned to arena '" + owner.key()
+                        + "'; each arena requires a separate world");
+                continue;
+            }
+            Arena arena = new Arena(plugin, definition, settings, world, this::releasePlayer);
+            if (!arenaWorlds.claim(world.getUID(), arena)) {
+                throw new IllegalStateException("Arena world ownership changed during reload");
+            }
+            arenas.put(definition.key(), arena);
         }
         plugin.getLogger().info("Loaded " + arenas.size() + " enabled Bed Wars arena(s).");
     }
@@ -158,6 +170,7 @@ public final class ArenaManager {
             arena.shutdown();
         }
         arenas.clear();
+        arenaWorlds.clear();
         playerArenas.clear();
     }
 

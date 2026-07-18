@@ -8,6 +8,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -44,7 +45,7 @@ public final class ArenaConfigRepository {
                 plugin.getLogger().severe("Could not load arena '" + key + "': " + exception.getMessage());
             }
         }
-        return Map.copyOf(definitions);
+        return Collections.unmodifiableMap(new LinkedHashMap<>(definitions));
     }
 
     private ArenaDefinition loadArena(String key, ConfigurationSection section) {

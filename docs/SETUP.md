@@ -188,6 +188,8 @@ The compass in hotbar slot 1 opens a localized player-head menu containing only 
 
 Enable runs the production arena loader. If any required location is missing or invalid, the arena remains disabled and the console identifies the failing field. No games or waiting players may be active while loaded arenas are enabled, disabled, deleted, or reloaded.
 
+Each loaded world can belong to exactly one enabled arena. Definitions are evaluated in `arenas.yml` order; the first arena claims the world's UUID, while any later arena using that same loaded world is skipped. The console error identifies both arena keys and `/bw list` contains only the owner, preventing ambiguous world-event routing.
+
 Use `/bw list` to verify the arena, then join with `/bw join <arena>`. Disable or remove an arena with:
 
 ```text
