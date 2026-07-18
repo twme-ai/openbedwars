@@ -34,7 +34,6 @@ import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
@@ -107,15 +106,19 @@ public final class SpecialItemService implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onUseSpecial(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND
-                || event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
         ItemStack item = event.getItem();
         String type = utilityType(item);
-        if (type == null) return;
+        if (!"dream_defender".equals(type) && !"popup_tower".equals(type)) return;
         Arena arena = playableArena(event.getPlayer());
         if (arena == null) return;
+        if (!UtilityInteractionPolicy.shouldHandle(
+                event.getHand(), event.getPlayer().getInventory().getItemInMainHand().getType())) {
+            event.setCancelled(true);
+            return;
+        }
         if (type.equals("dream_defender")) {
             event.setCancelled(true);
             spawnDreamDefender(event, arena);

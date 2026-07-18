@@ -9,6 +9,7 @@ import io.github.twmeai.openbedwars.game.ResourceType;
 import io.github.twmeai.openbedwars.game.TeamState;
 import io.github.twmeai.openbedwars.game.ToolTier;
 import io.github.twmeai.openbedwars.message.MessageService;
+import io.github.twmeai.openbedwars.special.UtilityInteractionPolicy;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -28,7 +29,6 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -412,8 +412,7 @@ public final class ShopService implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onFireball(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND
-                || event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
+        if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
         ItemStack item = event.getItem();
@@ -422,6 +421,11 @@ public final class ShopService implements Listener {
         }
         Arena arena = playableArena(event.getPlayer());
         if (arena == null) {
+            return;
+        }
+        if (!UtilityInteractionPolicy.shouldHandle(
+                event.getHand(), event.getPlayer().getInventory().getItemInMainHand().getType())) {
+            event.setCancelled(true);
             return;
         }
         event.setCancelled(true);

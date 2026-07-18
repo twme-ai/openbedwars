@@ -156,6 +156,8 @@ fireballs:
 
 The defaults reproduce the familiar half-second cooldown and Slowness IV after a successful throw. The server enforces the deadline independently of client packets and also sends the native fire-charge cooldown overlay. Attempts during the cooldown do not consume another fireball. Set `cooldown-ticks` to `0` to disable both the cooldown and throw slowness.
 
+Dream Defenders, Compact Pop-up Towers, and Fireballs can be used from either hand. When both hands hold activatable Bed Wars utilities, the main-hand interaction wins and the offhand event is cancelled, preventing one click from deploying two items. A sword or other non-utility in the main hand does not block offhand use.
+
 Fireballs, arrows, Ender Pearls, Bed Bugs, Bridge Eggs, and other player-fired projectiles are registered to their arena and removed during reset. Placed TNT is primed immediately, attributed to its placer, and included in the same cleanup so it cannot explode after a forced stop.
 
 ## Generated utility blocks
