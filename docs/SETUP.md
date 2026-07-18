@@ -104,6 +104,12 @@ respawn-protection-seconds: 3
 
 After the respawn countdown, a player ignores non-void damage for the configured protection time. Hitting an enemy immediately removes the attacker's protection, while void damage always remains lethal. Set `respawn-protection-seconds` to `0` to disable the window. Protection is removed on death, arena leave, reconnect expiry, and match reset.
 
+## Invisibility
+
+The item-shop invisibility potion keeps the player's real armor equipped while hiding all four armor slots from active enemies. The player, teammates, and spectators continue to receive the real equipment, so armor protection and permanent upgrades remain unchanged. Held items and potion or movement particles are still visible.
+
+Invisibility and its armor override end when the player receives uncancelled damage, lands a hit on an enemy, triggers an Alarm Trap, or the potion expires. Armor is also resynchronized after reconnect, respawn, permanent-armor purchases, and team protection upgrades.
+
 ## Validate and enable
 
 ```text

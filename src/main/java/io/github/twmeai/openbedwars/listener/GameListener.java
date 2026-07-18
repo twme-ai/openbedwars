@@ -22,6 +22,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -37,6 +38,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffectType;
 
 import java.util.EnumSet;
 import java.util.Set;
@@ -162,6 +164,7 @@ public final class GameListener implements Listener {
             event.setCancelled(true);
             return;
         }
+        arena.revealInvisibility(attacker);
         arena.removeRespawnProtection(attacker);
         if (arena.isRespawnProtected(victim)) {
             event.setCancelled(true);
@@ -205,6 +208,20 @@ public final class GameListener implements Listener {
                 event.setCancelled(true);
             }
         });
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDamageCompleted(EntityDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        arenas.arenaOf(player).ifPresent(arena -> arena.revealInvisibility(player));
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPotionEffect(EntityPotionEffectEvent event) {
+        if (!(event.getEntity() instanceof Player player)
+                || event.getModifiedType() != PotionEffectType.INVISIBILITY) return;
+        arenas.arenaOf(player).ifPresent(arena ->
+                arena.handleInvisibilityChange(player, event.getNewEffect() != null));
     }
 
     @EventHandler(ignoreCancelled = true)

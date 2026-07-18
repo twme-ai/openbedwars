@@ -40,7 +40,7 @@ Implemented in the current development build:
 - Per-match Ender Chest isolation, final-death forge drops, and killer resource rewards
 - Per-arena instant void-death, exclusive build-height limits, and configurable spawn, shop, forge, and generator protection zones
 - Capped iron, gold, diamond, and emerald generators with timed tiers, forge upgrades, rotating displays, and same-team resource splitting
-- Hypixel-style Quick Buy and item shop categories, permanent armor and shears, tiered tools, potions, and utilities
+- Hypixel-style Quick Buy and item shop categories, permanent armor and shears, tiered tools, potions with enemy-hidden armor, and utilities
 - Team upgrades, an ordered three-trap queue, heal pool, and Dragon Buff
 - Working Fireballs, Bridge Eggs, Bed Bugs, Dream Defenders, Magic Milk, Sponges, and Pop-up Towers
 - Per-player MiniMessage locales, English and Traditional Chinese translations, and localized scoreboards

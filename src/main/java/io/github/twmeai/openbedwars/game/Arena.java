@@ -35,6 +35,8 @@ import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Villager;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
@@ -57,6 +59,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public final class Arena {
     private static final DamageType VOID_DAMAGE_TYPE = RegistryAccess.registryAccess()
@@ -85,6 +88,7 @@ public final class Arena {
     private final Map<UUID, CombatHit> lastHits = new HashMap<>();
     private final Map<UUID, Long> trapImmuneUntil = new HashMap<>();
     private final RespawnProtectionTracker respawnProtection = new RespawnProtectionTracker();
+    private final Set<UUID> invisiblePlayers = new HashSet<>();
 
     private GamePhase phase = GamePhase.WAITING;
     private int countdown;
@@ -151,6 +155,7 @@ public final class Arena {
         PlayerState state = players.get(player.getUniqueId());
         if (state != null) {
             kits.givePersistentEquipment(player, state, teams.get(state.team()));
+            refreshInvisibleSubject(player);
         }
     }
 
@@ -159,6 +164,7 @@ public final class Arena {
             Player player = Bukkit.getPlayer(playerId);
             if (player != null) {
                 kits.applyTeamEnchantments(player, team);
+                refreshInvisibleSubject(player);
                 if (team.haste() > 0) {
                     player.addPotionEffect(new org.bukkit.potion.PotionEffect(
                             org.bukkit.potion.PotionEffectType.HASTE,
@@ -199,6 +205,27 @@ public final class Arena {
 
     public void removeRespawnProtection(Player player) {
         respawnProtection.remove(player.getUniqueId());
+    }
+
+    public void handleInvisibilityChange(Player player, boolean invisible) {
+        PlayerState state = players.get(player.getUniqueId());
+        boolean eligible = invisible
+                && phase == GamePhase.RUNNING
+                && state != null
+                && !state.eliminated()
+                && !state.respawning();
+        if (eligible) {
+            invisiblePlayers.add(player.getUniqueId());
+            refreshInvisibleSubject(player);
+            return;
+        }
+        if (!invisiblePlayers.remove(player.getUniqueId())) return;
+        forEachOnlinePlayer(viewer -> sendArmor(viewer, player, false));
+    }
+
+    public void revealInvisibility(Player player) {
+        handleInvisibilityChange(player, false);
+        player.removePotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY);
     }
 
     public Player creditedKiller(Player victim) {
@@ -490,6 +517,7 @@ public final class Arena {
         if (phase == GamePhase.RUNNING) {
             recordStatistics(Map.of(state, false));
         }
+        revealInvisibility(player);
         players.remove(player.getUniqueId());
         TeamState team = teams.get(state.team());
         team.removeMember(player.getUniqueId());
@@ -560,6 +588,10 @@ public final class Arena {
         } else {
             player.setGameMode(GameMode.SPECTATOR);
             player.teleportAsync(definition.spectator().toLocation(world));
+        }
+        if (phase == GamePhase.RUNNING) {
+            syncInvisibilityFor(player);
+            refreshInvisibleSubject(player);
         }
         broadcast("arena.player-reconnected",
                 MessageService.text("player", player.getName()),
@@ -650,6 +682,7 @@ public final class Arena {
         PlayerState killerState = killer == null ? null : players.get(killer.getUniqueId());
         lastHits.remove(victim.getUniqueId());
         respawnProtection.remove(victim.getUniqueId());
+        revealInvisibility(victim);
         boolean finalDeath = !victimTeam.bedAlive();
         if (finalDeath) {
             dropFinalEnderChest(victim, victimTeam);
@@ -1086,6 +1119,7 @@ public final class Arena {
                 kits.prepareForGame(player, state, teams.get(state.team()));
                 respawnProtection.grant(player.getUniqueId(), System.nanoTime(),
                         settings.respawnProtectionSeconds());
+                syncInvisibilityFor(player);
                 player.teleportAsync(teams.get(state.team()).definition().spawn().toLocation(world));
                 player.showTitle(Title.title(messages.render(player, "respawn.done"), net.kyori.adventure.text.Component.empty(),
                         Title.Times.times(Duration.ZERO, Duration.ofSeconds(1), Duration.ofMillis(250))));
@@ -1117,6 +1151,7 @@ public final class Arena {
         teams.get(state.team()).removeMember(state.playerId());
         state.eliminated(true);
         respawnProtection.remove(state.playerId());
+        invisiblePlayers.remove(state.playerId());
         playerRelease.accept(state.playerId(), state.snapshot());
         broadcast("arena.reconnect-expired",
                 MessageService.text("player", state.playerName()),
@@ -1214,6 +1249,11 @@ public final class Arena {
         }
         changedBlocks.clear();
         placedBlocks.clear();
+        for (UUID playerId : List.copyOf(invisiblePlayers)) {
+            Player invisible = Bukkit.getPlayer(playerId);
+            if (invisible != null) handleInvisibilityChange(invisible, false);
+        }
+        invisiblePlayers.clear();
 
         for (PlayerState state : List.copyOf(players.values())) {
             Player player = Bukkit.getPlayer(state.playerId());
@@ -1245,6 +1285,69 @@ public final class Arena {
 
     private boolean isProtectedBlock(Block block) {
         return definition.isProtectedBlock(block.getX(), block.getY(), block.getZ());
+    }
+
+    private void syncInvisibilityFor(Player viewer) {
+        for (UUID subjectId : List.copyOf(invisiblePlayers)) {
+            Player subject = Bukkit.getPlayer(subjectId);
+            if (subject == null) {
+                invisiblePlayers.remove(subjectId);
+                continue;
+            }
+            if (!subject.hasPotionEffect(org.bukkit.potion.PotionEffectType.INVISIBILITY)) {
+                handleInvisibilityChange(subject, false);
+                continue;
+            }
+            sendArmor(viewer, subject, shouldHideArmor(subject, viewer));
+        }
+    }
+
+    private void refreshInvisibleSubject(Player subject) {
+        if (!invisiblePlayers.contains(subject.getUniqueId())) return;
+        forEachOnlinePlayer(viewer -> sendArmor(viewer, subject, shouldHideArmor(subject, viewer)));
+    }
+
+    private boolean shouldHideArmor(Player subject, Player viewer) {
+        PlayerState subjectState = players.get(subject.getUniqueId());
+        PlayerState viewerState = players.get(viewer.getUniqueId());
+        return subjectState != null
+                && viewerState != null
+                && InvisibilityPolicy.hidesArmor(
+                        subjectState.team(), viewerState.team(), viewerState.eliminated(), viewerState.respawning());
+    }
+
+    private void sendArmor(Player viewer, Player subject, boolean hidden) {
+        viewer.sendEquipmentChange(subject, hidden ? hiddenArmor() : actualArmor(subject));
+    }
+
+    private Map<EquipmentSlot, ItemStack> hiddenArmor() {
+        return Map.of(
+                EquipmentSlot.HEAD, new ItemStack(Material.AIR),
+                EquipmentSlot.CHEST, new ItemStack(Material.AIR),
+                EquipmentSlot.LEGS, new ItemStack(Material.AIR),
+                EquipmentSlot.FEET, new ItemStack(Material.AIR)
+        );
+    }
+
+    private Map<EquipmentSlot, ItemStack> actualArmor(Player subject) {
+        EntityEquipment equipment = subject.getEquipment();
+        return Map.of(
+                EquipmentSlot.HEAD, itemOrAir(equipment.getHelmet()),
+                EquipmentSlot.CHEST, itemOrAir(equipment.getChestplate()),
+                EquipmentSlot.LEGS, itemOrAir(equipment.getLeggings()),
+                EquipmentSlot.FEET, itemOrAir(equipment.getBoots())
+        );
+    }
+
+    private ItemStack itemOrAir(ItemStack item) {
+        return item == null || item.isEmpty() ? new ItemStack(Material.AIR) : item.clone();
+    }
+
+    private void forEachOnlinePlayer(Consumer<Player> action) {
+        for (UUID playerId : players.keySet()) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null) action.accept(player);
+        }
     }
 
     private void prepareWaitingPlayer(Player player) {
