@@ -79,13 +79,18 @@ public final class UpgradeService implements Listener {
     private ItemStack display(Player player, UpgradeType type, Offer offer) {
         ItemStack stack = new ItemStack(type.icon());
         ItemMeta meta = stack.getItemMeta();
-        meta.displayName(messages.render(player, type.translationKey())
+        meta.displayName(messages.render(player, displayTranslationKey(type, offer))
                 .color(offer.maxed() ? NamedTextColor.GREEN : NamedTextColor.WHITE)
                 .decoration(TextDecoration.ITALIC, false));
         List<Component> lore = new ArrayList<>();
         if (offer.level() > 0) {
             lore.add(messages.render(player, "shop.current-tier", MessageService.number("tier", offer.level()))
                     .decoration(TextDecoration.ITALIC, false));
+        }
+        if (type == UpgradeType.FORGE) {
+            lore.add(messages.render(player, "upgrade.effect.forge_" + displayedTier(offer))
+                    .decoration(TextDecoration.ITALIC, false));
+            lore.add(Component.empty());
         }
         lore.add(messages.render(player, "shop.cost",
                 MessageService.number("cost", offer.cost()),
@@ -132,7 +137,7 @@ public final class UpgradeService implements Listener {
             if (member != null) {
                 messages.send(member, type.isTrap() ? "upgrade.trap-added" : "upgrade.purchased",
                         MessageService.component(type.isTrap() ? "trap" : "upgrade",
-                                messages.render(member, type.translationKey())));
+                                messages.render(member, purchasedTranslationKey(type, team))));
             }
         }
         render(player, arena, holder);
@@ -172,6 +177,22 @@ public final class UpgradeService implements Listener {
         return currentLevel >= costs.length
                 ? new Offer(0, currentLevel, true)
                 : new Offer(costs[currentLevel], currentLevel, false);
+    }
+
+    private String displayTranslationKey(UpgradeType type, Offer offer) {
+        return type == UpgradeType.FORGE
+                ? "upgrade.name.forge_" + displayedTier(offer)
+                : type.translationKey();
+    }
+
+    private String purchasedTranslationKey(UpgradeType type, TeamState team) {
+        return type == UpgradeType.FORGE
+                ? "upgrade.name.forge_" + team.forge()
+                : type.translationKey();
+    }
+
+    private int displayedTier(Offer offer) {
+        return Math.min(4, offer.maxed() ? offer.level() : offer.level() + 1);
     }
 
     private Arena playableArena(Player player) {

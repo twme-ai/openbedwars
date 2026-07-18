@@ -79,6 +79,18 @@ generator-splitting:
 
 Valid resource names are `iron`, `gold`, `diamond`, and `emerald`. Only items created by a generator carry split provenance. The marker is removed on the first pickup, so player drops, death loot, Ender Chest drops, and re-dropped generator resources never split again. Inventory overflow is dropped normally at the receiving teammate.
 
+Team Forge upgrades follow the standard four-tier progression:
+
+| Tier | Name | Iron and Gold | Additional effect |
+| --- | --- | --- | --- |
+| 0 | Base Forge | 1x | None |
+| 1 | Iron Forge | 1.5x | None |
+| 2 | Golden Forge | 2x | None |
+| 3 | Emerald Forge | 2x | Spawns Emeralds |
+| 4 | Molten Forge | 3x | Faster Emeralds |
+
+Emerald Forge deliberately keeps the Golden Forge iron and gold rate. Its upgrade is the new Emerald generator; Molten Forge is the next and final iron/gold speed increase.
+
 ## Protected areas
 
 New arenas protect blocks around team spawns, shops, forges, and map generators. The defaults follow the commonly used Bed Wars protection radii and can be changed per arena in `arenas.yml`:

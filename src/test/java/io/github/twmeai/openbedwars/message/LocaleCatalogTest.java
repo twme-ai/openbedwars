@@ -57,6 +57,10 @@ class LocaleCatalogTest {
             for (UpgradeType type : UpgradeType.values()) {
                 assertTranslation(catalog, type.translationKey());
             }
+            for (int tier = 1; tier <= 4; tier++) {
+                assertTranslation(catalog, "upgrade.name.forge_" + tier);
+                assertTranslation(catalog, "upgrade.effect.forge_" + tier);
+            }
             for (LeaderboardMetric metric : LeaderboardMetric.values()) {
                 assertTranslation(catalog, metric.translationKey());
             }

@@ -904,14 +904,14 @@ public final class Arena {
             if (team.members().isEmpty()) {
                 continue;
             }
-            double multiplier = 1.0 + (team.forge() * 0.5);
+            double multiplier = ForgeUpgradePolicy.ironGoldMultiplier(team.forge());
             spawnGenerator("forge:" + team.color() + ":iron", ResourceType.IRON,
                     team.definition().forge(), settings.generatorPeriods().iron() / multiplier,
                     ResourceType.IRON.generatorCap(1));
             spawnGenerator("forge:" + team.color() + ":gold", ResourceType.GOLD,
                     team.definition().forge(), settings.generatorPeriods().gold() / multiplier,
                     ResourceType.GOLD.generatorCap(1));
-            if (team.forge() >= 3) {
+            if (ForgeUpgradePolicy.generatesEmeralds(team.forge())) {
                 spawnGenerator("forge:" + team.color() + ":emerald", ResourceType.EMERALD,
                         team.definition().forge(), team.forge() >= 4 ? 8.0 : 12.0,
                         ResourceType.EMERALD.generatorCap(1));
