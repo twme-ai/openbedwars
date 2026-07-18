@@ -66,6 +66,19 @@ generator-displays:
   text-height: 2.35
 ```
 
+Iron and gold generated during a match are split once to every active teammate near the collector. The default three-block pickup box and eligible resource types are configurable:
+
+```yaml
+generator-splitting:
+  enabled: true
+  radius: 3.0
+  resources:
+    - iron
+    - gold
+```
+
+Valid resource names are `iron`, `gold`, `diamond`, and `emerald`. Only items created by a generator carry split provenance. The marker is removed on the first pickup, so player drops, death loot, Ender Chest drops, and re-dropped generator resources never split again. Inventory overflow is dropped normally at the receiving teammate.
+
 ## Protected areas
 
 New arenas protect blocks around team spawns, shops, forges, and map generators. The defaults follow the commonly used Bed Wars protection radii and can be changed per arena in `arenas.yml`:

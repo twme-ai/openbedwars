@@ -40,3 +40,10 @@ generator-displays:
   enabled: true
   item-height: 1.35
   text-height: 2.35
+
+generator-splitting:
+  enabled: true
+  radius: 3.0
+  resources:
+    - iron
+    - gold

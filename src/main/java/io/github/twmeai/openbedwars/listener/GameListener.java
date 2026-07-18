@@ -21,6 +21,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -137,6 +138,13 @@ public final class GameListener implements Listener {
         Player killer = arena.creditedKiller(victim);
         arena.handleDeathResources(victim, killer, resources);
         arena.handleDeath(victim, killer);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onItemPickup(EntityPickupItemEvent event) {
+        if (!(event.getEntity() instanceof Player player)) return;
+        arenas.arenaOf(player).ifPresent(arena ->
+                arena.handleGeneratorPickup(player, event.getItem(), event.getRemaining()));
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

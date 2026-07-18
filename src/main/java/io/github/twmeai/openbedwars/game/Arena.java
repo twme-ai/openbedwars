@@ -20,6 +20,7 @@ import org.bukkit.GameRules;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
@@ -35,6 +36,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.entity.Villager;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Transformation;
@@ -69,6 +71,7 @@ public final class Arena {
     private final BiConsumer<UUID, PlayerSnapshot> playerRelease;
     private final KitService kits = new KitService();
     private final ScoreboardService scoreboards;
+    private final NamespacedKey generatorResourceKey;
     private final Map<UUID, PlayerState> players = new LinkedHashMap<>();
     private final EnumMap<TeamColor, TeamState> teams = new EnumMap<>(TeamColor.class);
     private final Map<String, GeneratorClock> generatorClocks = new HashMap<>();
@@ -103,6 +106,7 @@ public final class Arena {
         this.world = world;
         this.playerRelease = playerRelease;
         this.scoreboards = new ScoreboardService(messages);
+        this.generatorResourceKey = new NamespacedKey(plugin, "generator_resource");
         definition.teams().values().stream()
                 .sorted(Comparator.comparing(team -> team.color().ordinal()))
                 .forEach(team -> teams.put(team.color(), new TeamState(team)));
@@ -263,6 +267,32 @@ public final class Arena {
                     MessageService.component("resource", messages.render(killer, type.translationKey())),
                     MessageService.color("resource_color", type.textColor()));
         }
+    }
+
+    public void handleGeneratorPickup(Player collector, Item item, int remaining) {
+        PlayerState collectorState = players.get(collector.getUniqueId());
+        if (phase != GamePhase.RUNNING || collectorState == null || collectorState.eliminated()
+                || collectorState.respawning() || collectorState.disconnected()) return;
+
+        ItemStack stack = item.getItemStack();
+        ResourceType type = ResourceType.fromMaterial(stack.getType()).orElse(null);
+        if (type == null || !settings.generatorSplitting().splits(type)) return;
+        ItemMeta meta = stack.getItemMeta();
+        if (!meta.getPersistentDataContainer().has(generatorResourceKey, PersistentDataType.BYTE)) return;
+
+        meta.getPersistentDataContainer().remove(generatorResourceKey);
+        stack.setItemMeta(meta);
+        item.setItemStack(stack);
+        int collected = Math.max(0, stack.getAmount() - remaining);
+        if (collected == 0) return;
+
+        double radius = settings.generatorSplitting().radius();
+        world.getNearbyEntities(collector.getLocation(), radius, radius, radius).stream()
+                .filter(Player.class::isInstance)
+                .map(Player.class::cast)
+                .filter(recipient -> !recipient.equals(collector))
+                .filter(recipient -> canReceiveGeneratorSplit(collectorState, recipient))
+                .forEach(recipient -> giveGeneratorSplit(recipient, type, collected));
     }
 
     public boolean placeGeneratedBlock(Block block, Material material) {
@@ -823,11 +853,33 @@ public final class Arena {
 
     private boolean dropResource(ResourceType type, Location location, int cap) {
         if (isGeneratorFull(type, location, cap)) return false;
-        Item item = world.dropItem(location.clone().add(0, 0.25, 0), new ItemStack(type.material()));
+        ItemStack stack = new ItemStack(type.material());
+        if (settings.generatorSplitting().splits(type)) {
+            ItemMeta meta = stack.getItemMeta();
+            meta.getPersistentDataContainer().set(generatorResourceKey, PersistentDataType.BYTE, (byte) 1);
+            stack.setItemMeta(meta);
+        }
+        Item item = world.dropItem(location.clone().add(0, 0.25, 0), stack);
         item.setVelocity(new Vector());
         item.setPickupDelay(0);
         trackEntity(item);
         return true;
+    }
+
+    private boolean canReceiveGeneratorSplit(PlayerState collectorState, Player recipient) {
+        PlayerState recipientState = players.get(recipient.getUniqueId());
+        return recipientState != null
+                && recipientState.team() == collectorState.team()
+                && !recipientState.eliminated()
+                && !recipientState.respawning()
+                && !recipientState.disconnected();
+    }
+
+    private void giveGeneratorSplit(Player recipient, ResourceType type, int amount) {
+        ItemStack share = new ItemStack(type.material(), amount);
+        recipient.getInventory().addItem(share).values()
+                .forEach(leftover -> dropTrackedItem(recipient.getLocation(), leftover));
+        recipient.playSound(recipient.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.6f, 1.3f);
     }
 
     private boolean isGeneratorFull(ResourceType type, Location location, int cap) {

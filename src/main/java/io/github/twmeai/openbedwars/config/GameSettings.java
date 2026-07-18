@@ -6,6 +6,9 @@ import io.github.twmeai.openbedwars.game.ResourceType;
 import org.bukkit.configuration.file.FileConfiguration;
 
 import java.util.EnumMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 public record GameSettings(
         int minimumPlayers,
@@ -17,7 +20,8 @@ public record GameSettings(
         int winBonusExperience,
         EventSchedule eventSchedule,
         GeneratorPeriods generatorPeriods,
-        GeneratorDisplaySettings generatorDisplays
+        GeneratorDisplaySettings generatorDisplays,
+        GeneratorSplitSettings generatorSplitting
 ) {
     public GameSettings {
         if (minimumPlayers < 2 || countdownSeconds < 1 || respawnSeconds < 0 || endingSeconds < 1
@@ -55,8 +59,28 @@ public record GameSettings(
                         config.getBoolean("generator-displays.enabled", true),
                         config.getDouble("generator-displays.item-height", 1.35),
                         config.getDouble("generator-displays.text-height", 2.35)
+                ),
+                new GeneratorSplitSettings(
+                        config.getBoolean("generator-splitting.enabled", true),
+                        config.getDouble("generator-splitting.radius", 3.0),
+                        splitResources(config)
                 )
         );
+    }
+
+    private static Set<ResourceType> splitResources(FileConfiguration config) {
+        List<String> configured = config.isList("generator-splitting.resources")
+                ? config.getStringList("generator-splitting.resources")
+                : List.of("iron", "gold");
+        java.util.EnumSet<ResourceType> resources = java.util.EnumSet.noneOf(ResourceType.class);
+        for (String value : configured) {
+            try {
+                resources.add(ResourceType.valueOf(value.toUpperCase(Locale.ROOT)));
+            } catch (IllegalArgumentException exception) {
+                throw new IllegalArgumentException("Unknown generator splitting resource: " + value);
+            }
+        }
+        return resources;
     }
 
     private static TieredPeriod tiered(
@@ -109,6 +133,19 @@ public record GameSettings(
                     || itemHeight < 0 || itemHeight > 10 || textHeight < 0 || textHeight > 10) {
                 throw new IllegalArgumentException("Generator display heights must be between 0 and 10");
             }
+        }
+    }
+
+    public record GeneratorSplitSettings(boolean enabled, double radius, Set<ResourceType> resources) {
+        public GeneratorSplitSettings {
+            if (!Double.isFinite(radius) || radius <= 0 || radius > 16) {
+                throw new IllegalArgumentException("Generator splitting radius must be greater than 0 and at most 16");
+            }
+            resources = Set.copyOf(resources);
+        }
+
+        public boolean splits(ResourceType type) {
+            return enabled && resources.contains(type);
         }
     }
 }
