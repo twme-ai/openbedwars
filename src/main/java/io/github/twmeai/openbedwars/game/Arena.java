@@ -178,6 +178,13 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         }
     }
 
+    public void reconcileDefaultSword(Player player) {
+        PlayerState state = players.get(player.getUniqueId());
+        if (phase == GamePhase.RUNNING && isActive(state)) {
+            kits.reconcileDefaultSword(player, teams.get(state.team()));
+        }
+    }
+
     public void applyTeamEnchantments(TeamState team) {
         for (UUID playerId : team.members()) {
             Player player = Bukkit.getPlayer(playerId);

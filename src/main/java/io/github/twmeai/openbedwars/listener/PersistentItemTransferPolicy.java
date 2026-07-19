@@ -10,9 +10,6 @@ import java.util.Set;
 final class PersistentItemTransferPolicy {
     private static final Set<Material> PERSISTENT_ITEMS = EnumSet.of(
             Material.WOODEN_SWORD,
-            Material.STONE_SWORD,
-            Material.IRON_SWORD,
-            Material.DIAMOND_SWORD,
             Material.WOODEN_PICKAXE,
             Material.IRON_PICKAXE,
             Material.GOLDEN_PICKAXE,

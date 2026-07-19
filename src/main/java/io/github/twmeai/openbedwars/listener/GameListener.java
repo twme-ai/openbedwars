@@ -43,6 +43,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
@@ -51,11 +52,15 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
 
 public final class GameListener implements Listener {
     private final OpenBedWarsPlugin plugin;
     private final ArenaManager arenas;
+    private final Set<UUID> pendingSwordReconciliations = new HashSet<>();
 
     public GameListener(OpenBedWarsPlugin plugin, ArenaManager arenas) {
         this.plugin = plugin;
@@ -174,8 +179,10 @@ public final class GameListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onItemPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
-        arenas.arenaOf(player).ifPresent(arena ->
-                arena.handleGeneratorPickup(player, event.getItem(), event.getRemaining()));
+        arenas.arenaOf(player).ifPresent(arena -> {
+            arena.handleGeneratorPickup(player, event.getItem(), event.getRemaining());
+            scheduleSwordReconciliation(player);
+        });
     }
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
@@ -268,17 +275,21 @@ public final class GameListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onDrop(PlayerDropItemEvent event) {
-        if (arenas.arenaOf(event.getPlayer()).isPresent()
-                && PersistentItemTransferPolicy.isPersistent(event.getItemDrop().getItemStack().getType())) {
+        Player player = event.getPlayer();
+        Arena arena = arenas.arenaOf(player).orElse(null);
+        if (arena == null) return;
+        if (PersistentItemTransferPolicy.isPersistent(event.getItemDrop().getItemStack().getType())) {
             event.setCancelled(true);
         } else {
-            arenas.arenaOf(event.getPlayer()).ifPresent(arena -> arena.trackEntity(event.getItemDrop()));
+            arena.trackEntity(event.getItemDrop());
+            scheduleSwordReconciliation(player);
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player) || arenas.arenaOf(player).isEmpty()) return;
+        scheduleSwordReconciliation(player);
         if (event.getSlotType() == InventoryType.SlotType.ARMOR) {
             event.setCancelled(true);
             return;
@@ -304,6 +315,7 @@ public final class GameListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player player) || arenas.arenaOf(player).isEmpty()) return;
+        scheduleSwordReconciliation(player);
         if (event.getRawSlots().stream()
                 .anyMatch(slot -> event.getView().getSlotType(slot) == InventoryType.SlotType.ARMOR)) {
             event.setCancelled(true);
@@ -314,6 +326,13 @@ public final class GameListener implements Listener {
         if (PersistentItemTransferPolicy.shouldCancelDrag(
                 material(event.getOldCursor()), touchesTop)) {
             event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (event.getPlayer() instanceof Player player && arenas.arenaOf(player).isPresent()) {
+            scheduleSwordReconciliation(player);
         }
     }
 
@@ -452,5 +471,14 @@ public final class GameListener implements Listener {
 
     private Material material(ItemStack item) {
         return item == null || item.isEmpty() ? null : item.getType();
+    }
+
+    private void scheduleSwordReconciliation(Player player) {
+        UUID playerId = player.getUniqueId();
+        if (!pendingSwordReconciliations.add(playerId)) return;
+        org.bukkit.Bukkit.getScheduler().runTask(plugin, () -> {
+            pendingSwordReconciliations.remove(playerId);
+            arenas.arenaOf(player).ifPresent(arena -> arena.reconcileDefaultSword(player));
+        });
     }
 }

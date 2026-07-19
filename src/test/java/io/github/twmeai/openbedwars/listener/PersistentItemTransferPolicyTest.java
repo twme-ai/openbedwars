@@ -26,7 +26,7 @@ class PersistentItemTransferPolicyTest {
     @Test
     void blocksShiftMovingPersistentEquipmentFromPlayerInventoryToContainer() {
         assertTrue(cancel(InventoryAction.MOVE_TO_OTHER_INVENTORY, ClickType.SHIFT_LEFT,
-                false, true, Material.IRON_SWORD, null, null, null));
+                false, true, Material.IRON_PICKAXE, null, null, null));
     }
 
     @Test
@@ -52,7 +52,7 @@ class PersistentItemTransferPolicyTest {
     @Test
     void blocksHidingPersistentEquipmentInsideBundlesInEitherInventory() {
         assertTrue(cancel(InventoryAction.PLACE_ALL_INTO_BUNDLE, ClickType.RIGHT,
-                false, false, Material.BUNDLE, Material.STONE_SWORD, null, null));
+                false, false, Material.BUNDLE, Material.WOODEN_SWORD, null, null));
         assertTrue(cancel(InventoryAction.PLACE_SOME_INTO_BUNDLE, ClickType.RIGHT,
                 true, true, Material.BUNDLE, Material.GOLDEN_PICKAXE, null, null));
         assertTrue(cancel(InventoryAction.PICKUP_ALL_INTO_BUNDLE, ClickType.RIGHT,
@@ -62,9 +62,19 @@ class PersistentItemTransferPolicyTest {
     }
 
     @Test
+    void allowsPurchasedSwordsToLeaveThePlayerInventory() {
+        assertFalse(cancel(InventoryAction.DROP_ALL_SLOT, ClickType.DROP,
+                false, false, Material.STONE_SWORD, null, null, null));
+        assertFalse(cancel(InventoryAction.MOVE_TO_OTHER_INVENTORY, ClickType.SHIFT_LEFT,
+                false, true, Material.IRON_SWORD, null, null, null));
+        assertFalse(cancel(InventoryAction.PLACE_ALL_INTO_BUNDLE, ClickType.RIGHT,
+                false, false, Material.BUNDLE, Material.DIAMOND_SWORD, null, null));
+    }
+
+    @Test
     void blocksDroppingPersistentEquipmentFromCursorOrClickedSlot() {
         assertTrue(cancel(InventoryAction.DROP_ALL_CURSOR, ClickType.WINDOW_BORDER_LEFT,
-                false, false, null, Material.DIAMOND_SWORD, null, null));
+                false, false, null, Material.WOODEN_SWORD, null, null));
         assertTrue(cancel(InventoryAction.DROP_ONE_SLOT, ClickType.DROP,
                 false, false, Material.WOODEN_PICKAXE, null, null, null));
         assertFalse(cancel(InventoryAction.DROP_ALL_SLOT, ClickType.DROP,

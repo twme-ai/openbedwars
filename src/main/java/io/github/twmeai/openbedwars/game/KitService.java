@@ -11,7 +11,10 @@ import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 public final class KitService {
@@ -43,7 +46,7 @@ public final class KitService {
     }
 
     public void givePersistentEquipment(Player player, PlayerState state, TeamState team) {
-        ensureWoodenSword(player, team);
+        reconcileDefaultSword(player, team);
         equipArmor(player, state, team);
         giveTool(player, state.pickaxeTier(), true, team);
         giveTool(player, state.axeTier(), false, team);
@@ -62,16 +65,25 @@ public final class KitService {
         }
     }
 
-    public void ensureWoodenSword(Player player, TeamState team) {
-        boolean hasSword = java.util.Arrays.stream(player.getInventory().getContents())
+    public void reconcileDefaultSword(Player player, TeamState team) {
+        List<Material> contents = new ArrayList<>(Arrays.stream(player.getInventory().getContents())
                 .filter(java.util.Objects::nonNull)
                 .map(ItemStack::getType)
-                .anyMatch(SWORDS::contains);
-        if (!hasSword) {
+                .toList());
+        contents.add(player.getItemOnCursor().getType());
+        DefaultSwordPolicy.Decision decision = DefaultSwordPolicy.decide(contents);
+        if (decision.removeWoodenSwords()) {
+            player.getInventory().remove(Material.WOODEN_SWORD);
+            if (player.getItemOnCursor().getType() == Material.WOODEN_SWORD) {
+                player.setItemOnCursor(new ItemStack(Material.AIR));
+            }
+        }
+        if (decision.addWoodenSword()) {
             ItemStack sword = unbreakable(new ItemStack(Material.WOODEN_SWORD));
             applySharpness(sword, team);
             player.getInventory().addItem(sword);
         }
+        if (decision.removeWoodenSwords() || decision.addWoodenSword()) player.updateInventory();
     }
 
     public void applyTeamEnchantments(Player player, TeamState team) {
