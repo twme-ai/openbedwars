@@ -40,9 +40,11 @@ import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
@@ -307,6 +309,22 @@ public final class GameListener implements Listener {
         boolean touchesTop = event.getRawSlots().stream().anyMatch(slot -> slot < topSize);
         if (PersistentItemTransferPolicy.shouldCancelDrag(
                 material(event.getOldCursor()), touchesTop)) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPrepareCraft(PrepareItemCraftEvent event) {
+        boolean arenaViewer = event.getViewers().stream()
+                .filter(Player.class::isInstance)
+                .map(Player.class::cast)
+                .anyMatch(player -> arenas.arenaOf(player).isPresent());
+        if (arenaViewer) event.getInventory().setResult(null);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onCraft(CraftItemEvent event) {
+        if (event.getWhoClicked() instanceof Player player && arenas.arenaOf(player).isPresent()) {
             event.setCancelled(true);
         }
     }

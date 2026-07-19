@@ -111,6 +111,10 @@ Buying a stone, iron, or diamond sword replaces the default wooden sword instead
 
 Swords, shears, pickaxes, and axes cannot be moved out of the player inventory during a match. OpenBedWars blocks shift transfers, cursor placement, number-key and offhand swaps, drags into a top inventory, and bundle insertion; cursor and slot drop actions remain blocked as well. Players can still rearrange this equipment inside their own inventory and retrieve a matching item that already existed in a container.
 
+## Crafting
+
+Minecraft crafting is disabled for every player who has joined an arena, including the waiting, countdown, running, and ending phases. OpenBedWars clears the personal 2x2 crafting result before it is shown and cancels the final craft event as a second line of defense, so recipe-book, normal clicks, and shift-click extraction cannot turn match resources into unpriced items. Players outside an arena retain normal Minecraft crafting.
+
 ## Protected areas
 
 New arenas protect blocks around team spawns, shops, forges, and map generators. The defaults follow the commonly used Bed Wars protection radii and can be changed per arena in `arenas.yml`:
