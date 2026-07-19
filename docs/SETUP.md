@@ -148,6 +148,8 @@ Once a team's bed is destroyed, each subsequent death is marked as a final kill 
 
 A disconnected player keeps their team alive during the configured reconnect grace period. If the final member leaves explicitly or lets that grace period expire, the team is eliminated without a fabricated death or final-kill message.
 
+Arena deaths ignore the world's `keep_inventory` gamerule. OpenBedWars forces the individual death event not to retain match inventory and, when keep-inventory leaves the drop list without transferable resources, reads Iron, Gold, Diamonds, and Emeralds from the player's live inventory before it is cleared. Killer rewards and ordinary item loss therefore behave identically with either gamerule value. The world gamerule itself is not changed, so players outside an arena remain unaffected.
+
 ## Fireballs
 
 Fireball pacing is configured globally in `config.yml`:

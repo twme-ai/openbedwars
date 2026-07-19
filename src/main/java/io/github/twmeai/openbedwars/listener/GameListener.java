@@ -6,6 +6,7 @@ import io.github.twmeai.openbedwars.OpenBedWarsPlugin;
 import io.github.twmeai.openbedwars.game.Arena;
 import io.github.twmeai.openbedwars.game.ArenaManager;
 import io.github.twmeai.openbedwars.game.GamePhase;
+import io.github.twmeai.openbedwars.game.ResourceType;
 import org.bukkit.Material;
 import org.bukkit.entity.EnderDragon;
 import org.bukkit.entity.Player;
@@ -49,17 +50,10 @@ import org.bukkit.event.player.PlayerItemDamageEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.potion.PotionEffectType;
 
-import java.util.EnumSet;
-import java.util.Set;
+import java.util.Arrays;
+import java.util.Objects;
 
 public final class GameListener implements Listener {
-    private static final Set<Material> RESOURCES = EnumSet.of(
-            Material.IRON_INGOT,
-            Material.GOLD_INGOT,
-            Material.DIAMOND,
-            Material.EMERALD
-    );
-
     private final OpenBedWarsPlugin plugin;
     private final ArenaManager arenas;
 
@@ -154,10 +148,20 @@ public final class GameListener implements Listener {
         if (arena == null || arena.phase() != GamePhase.RUNNING) {
             return;
         }
-        java.util.List<ItemStack> resources = event.getDrops().stream()
-                .filter(item -> RESOURCES.contains(item.getType()))
+        boolean hasResourceDrops = event.getDrops().stream()
+                .filter(Objects::nonNull)
+                .anyMatch(item -> ResourceType.fromMaterial(item.getType()).isPresent());
+        java.util.List<ItemStack> resources = DeathResourcePolicy.selectSource(
+                event.getKeepInventory(),
+                hasResourceDrops,
+                Arrays.asList(victim.getInventory().getContents()),
+                event.getDrops()).stream()
+                .filter(Objects::nonNull)
+                .filter(item -> !item.isEmpty())
+                .filter(item -> ResourceType.fromMaterial(item.getType()).isPresent())
                 .map(ItemStack::clone)
                 .toList();
+        event.setKeepInventory(false);
         event.getDrops().clear();
         event.setDroppedExp(0);
         event.setKeepLevel(true);

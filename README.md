@@ -37,7 +37,7 @@ Implemented in the current development build:
 
 - Isolated arenas with waiting, countdown, running, sudden-death, ending, reset, and automatic cross-world release
 - Automatic team balancing, beds, respawning with attack-cancelled protection, final kills, one-time team eliminations, victory detection, and combat attribution
-- Per-match Ender Chest isolation, final-death forge drops, and killer resource rewards
+- Per-match Ender Chest isolation, final-death forge drops, and gamerule-independent killer resource rewards
 - Per-arena instant void-death, exclusive build-height limits, and configurable spawn, shop, forge, and generator protection zones
 - Capped iron, gold, diamond, and emerald generators with timed tiers, forge upgrades, rotating displays, and same-team resource splitting
 - Hypixel-style Quick Buy and item shop categories, container-safe swords and permanent equipment, tiered tools, potions with enemy-hidden armor, utilities, and disabled in-match crafting
