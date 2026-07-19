@@ -75,7 +75,9 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     private final ArenaDefinition definition;
     private final GameSettings settings;
     private final World world;
+    private final Function<Player, PlayerSnapshot> playerSnapshotCapture;
     private final BiConsumer<UUID, PlayerSnapshot> playerRelease;
+    private final Consumer<UUID> playerRestoreComplete;
     private final KitService kits = new KitService();
     private final ScoreboardService scoreboards;
     private final NamespacedKey generatorResourceKey;
@@ -113,14 +115,18 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
             ArenaDefinition definition,
             GameSettings settings,
             World world,
-            BiConsumer<UUID, PlayerSnapshot> playerRelease
+            Function<Player, PlayerSnapshot> playerSnapshotCapture,
+            BiConsumer<UUID, PlayerSnapshot> playerRelease,
+            Consumer<UUID> playerRestoreComplete
     ) {
         this.plugin = plugin;
         this.messages = plugin.messages();
         this.definition = definition;
         this.settings = settings;
         this.world = world;
+        this.playerSnapshotCapture = playerSnapshotCapture;
         this.playerRelease = playerRelease;
+        this.playerRestoreComplete = playerRestoreComplete;
         this.scoreboards = new ScoreboardService(messages);
         this.generatorResourceKey = new NamespacedKey(plugin, "generator_resource");
         this.matchEntityKey = new NamespacedKey(plugin, "match_entity");
@@ -589,7 +595,9 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
             return JoinResult.FULL;
         }
 
-        PlayerState state = new PlayerState(player.getUniqueId(), player.getName(), PlayerSnapshot.capture(player), team.color());
+        PlayerSnapshot snapshot = playerSnapshotCapture.apply(player);
+        if (snapshot == null) return JoinResult.SNAPSHOT_UNAVAILABLE;
+        PlayerState state = new PlayerState(player.getUniqueId(), player.getName(), snapshot, team.color());
         players.put(player.getUniqueId(), state);
         team.addMember(player.getUniqueId());
         prepareWaitingPlayer(player);
@@ -646,6 +654,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         playerRelease.accept(player.getUniqueId(), state.snapshot());
         scoreboards.remove(player);
         state.snapshot().restore(player);
+        playerRestoreComplete.accept(player.getUniqueId());
         if (notify) {
             messages.send(player, "arena.left");
         }
@@ -1466,6 +1475,7 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
                 plugin.spectatorService().release(player);
                 scoreboards.remove(player);
                 state.snapshot().restore(player);
+                playerRestoreComplete.accept(state.playerId());
             } else {
                 plugin.spectatorService().release(state.playerId());
             }
@@ -1628,7 +1638,9 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
         SUCCESS,
         ALREADY_JOINED,
         FULL,
-        RUNNING
+        RUNNING,
+        RESTORING,
+        SNAPSHOT_UNAVAILABLE
     }
 
     public enum BreakResult {

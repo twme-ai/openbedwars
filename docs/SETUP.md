@@ -144,6 +144,12 @@ After the respawn countdown, a player ignores non-void damage for the configured
 
 Disconnecting during the countdown does not bypass it. The original monotonic deadline continues while the player is offline; reconnecting within the grace period resumes only the remaining countdown, then grants the same starter kit and protection as an uninterrupted respawn. If the deadline elapsed while offline, respawn completes on the next server tick after reconnecting.
 
+## Restart-safe player restoration
+
+Before changing a player's inventory or state, OpenBedWars writes a versioned pre-game snapshot to `plugins/OpenBedWars/pending-restores/<uuid>.yml`. The flushed temporary file replaces the prior record atomically, and the final record remains while the player belongs to an arena. A normal online leave or reset restores the player first and then deletes the record. If the player is offline during a reload, server shutdown, or unexpected process exit, the record survives and is restored one tick after the next login before it is deleted.
+
+Include `pending-restores` in backups and do not remove a player's file while it is pending. An unreadable, unsupported, or otherwise invalid snapshot is retained, logged as an error, and blocks that player from joining an arena rather than overwriting the only recovery copy. After repairing or restoring the file, have the player reconnect to retry restoration.
+
 ## Final eliminations
 
 Once a team's bed is destroyed, each subsequent death is marked as a final kill and permanently moves that player to observer mode. In multi-player teams, eliminating one member does not eliminate the team while another active member remains. The final member's elimination produces one localized team-elimination announcement before victory is evaluated.

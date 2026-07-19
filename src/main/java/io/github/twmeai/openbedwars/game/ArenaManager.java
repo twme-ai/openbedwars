@@ -9,10 +9,15 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -20,12 +25,16 @@ public final class ArenaManager {
     private final OpenBedWarsPlugin plugin;
     private final Map<String, Arena> arenas = new LinkedHashMap<>();
     private final ExclusiveArenaWorlds<Arena> arenaWorlds = new ExclusiveArenaWorlds<>();
-    private final Map<UUID, Arena> playerArenas = new java.util.HashMap<>();
-    private final Map<UUID, PlayerSnapshot> pendingRestores = new java.util.HashMap<>();
+    private final Map<UUID, Arena> playerArenas = new HashMap<>();
+    private final Map<UUID, PlayerSnapshot> pendingRestores = new HashMap<>();
+    private final Set<UUID> restoringPlayers = new HashSet<>();
+    private final Set<UUID> unavailableSnapshots = new HashSet<>();
+    private final PlayerSnapshotStore snapshotStore;
     private BukkitTask ticker;
 
     public ArenaManager(OpenBedWarsPlugin plugin) {
         this.plugin = plugin;
+        this.snapshotStore = new PlayerSnapshotStore(plugin);
         reload();
         ticker = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 20L, 20L);
     }
@@ -35,7 +44,7 @@ public final class ArenaManager {
     }
 
     public Optional<Arena> arena(String key) {
-        return Optional.ofNullable(arenas.get(key.toLowerCase(java.util.Locale.ROOT)));
+        return Optional.ofNullable(arenas.get(key.toLowerCase(Locale.ROOT)));
     }
 
     public Optional<Arena> bestAvailableArena() {
@@ -62,6 +71,14 @@ public final class ArenaManager {
         if (playerArenas.containsKey(player.getUniqueId())) {
             return Arena.JoinResult.ALREADY_JOINED;
         }
+        if (restoringPlayers.contains(player.getUniqueId())) {
+            return Arena.JoinResult.RESTORING;
+        }
+        if (pendingRestores.containsKey(player.getUniqueId())
+                || unavailableSnapshots.contains(player.getUniqueId())
+                || snapshotStore.hasPending(player.getUniqueId())) {
+            return Arena.JoinResult.SNAPSHOT_UNAVAILABLE;
+        }
         Arena.JoinResult result = arena.join(player);
         if (result == Arena.JoinResult.SUCCESS) {
             playerArenas.put(player.getUniqueId(), arena);
@@ -74,6 +91,14 @@ public final class ArenaManager {
         if (group.stream().anyMatch(player -> playerArenas.containsKey(player.getUniqueId()))) {
             return Arena.JoinResult.ALREADY_JOINED;
         }
+        if (group.stream().anyMatch(player -> restoringPlayers.contains(player.getUniqueId()))) {
+            return Arena.JoinResult.RESTORING;
+        }
+        if (group.stream().anyMatch(player -> pendingRestores.containsKey(player.getUniqueId())
+                || unavailableSnapshots.contains(player.getUniqueId())
+                || snapshotStore.hasPending(player.getUniqueId()))) {
+            return Arena.JoinResult.SNAPSHOT_UNAVAILABLE;
+        }
         if (arena.phase() == GamePhase.RUNNING || arena.phase() == GamePhase.ENDING) {
             return Arena.JoinResult.RUNNING;
         }
@@ -81,7 +106,7 @@ public final class ArenaManager {
             return Arena.JoinResult.FULL;
         }
 
-        java.util.ArrayList<Player> joined = new java.util.ArrayList<>();
+        ArrayList<Player> joined = new ArrayList<>();
         TeamColor preferred = arena.preferredTeam(Math.min(group.size(), arena.definition().playersPerTeam()));
         for (int index = 0; index < group.size(); index++) {
             Player player = group.get(index);
@@ -120,12 +145,19 @@ public final class ArenaManager {
         if (arena != null && arena.reconnect(player)) {
             return true;
         }
+        if (restoringPlayers.contains(player.getUniqueId())) return true;
+        unavailableSnapshots.remove(player.getUniqueId());
         PlayerSnapshot snapshot = pendingRestores.remove(player.getUniqueId());
-        if (snapshot != null) {
-            Bukkit.getScheduler().runTask(plugin, () -> snapshot.restore(player));
-            return true;
+        if (snapshot == null && snapshotStore.hasPending(player.getUniqueId())) {
+            snapshot = snapshotStore.load(player).orElse(null);
+            if (snapshot == null) {
+                unavailableSnapshots.add(player.getUniqueId());
+                return true;
+            }
         }
-        return false;
+        if (snapshot == null) return false;
+        scheduleRestore(player, snapshot);
+        return true;
     }
 
     public void reload() {
@@ -148,7 +180,15 @@ public final class ArenaManager {
                         + "'; each arena requires a separate world");
                 continue;
             }
-            Arena arena = new Arena(plugin, definition, settings, world, this::releasePlayer);
+            Arena arena = new Arena(
+                    plugin,
+                    definition,
+                    settings,
+                    world,
+                    this::captureSnapshot,
+                    this::releasePlayer,
+                    this::completeRestore
+            );
             if (!arenaWorlds.claim(world.getUID(), arena)) {
                 throw new IllegalStateException("Arena world ownership changed during reload");
             }
@@ -189,6 +229,53 @@ public final class ArenaManager {
         playerArenas.remove(playerId);
         if (Bukkit.getPlayer(playerId) == null) {
             pendingRestores.put(playerId, snapshot);
+        }
+    }
+
+    private PlayerSnapshot captureSnapshot(Player player) {
+        UUID playerId = player.getUniqueId();
+        if (pendingRestores.containsKey(playerId)
+                || unavailableSnapshots.contains(playerId)
+                || snapshotStore.hasPending(playerId)) {
+            return null;
+        }
+        try {
+            PlayerSnapshot snapshot = PlayerSnapshot.capture(player);
+            return snapshotStore.save(playerId, snapshot) ? snapshot : null;
+        } catch (RuntimeException exception) {
+            plugin.getLogger().log(Level.SEVERE,
+                    "Could not capture the pre-game snapshot for player " + playerId, exception);
+            return null;
+        }
+    }
+
+    private void scheduleRestore(Player player, PlayerSnapshot snapshot) {
+        UUID playerId = player.getUniqueId();
+        restoringPlayers.add(playerId);
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            try {
+                if (!player.isOnline()) {
+                    pendingRestores.put(playerId, snapshot);
+                    return;
+                }
+                snapshot.restore(player);
+                completeRestore(playerId);
+            } catch (RuntimeException exception) {
+                pendingRestores.put(playerId, snapshot);
+                plugin.getLogger().log(Level.SEVERE,
+                        "Could not restore the pending snapshot for player " + playerId, exception);
+            } finally {
+                restoringPlayers.remove(playerId);
+            }
+        });
+    }
+
+    private void completeRestore(UUID playerId) {
+        pendingRestores.remove(playerId);
+        if (snapshotStore.delete(playerId)) {
+            unavailableSnapshots.remove(playerId);
+        } else {
+            unavailableSnapshots.add(playerId);
         }
     }
 }

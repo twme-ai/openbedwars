@@ -80,6 +80,16 @@ class LocaleCatalogTest {
         }
     }
 
+    @Test
+    void snapshotSafetyMessagesAreBundled() {
+        for (String locale : Set.of("en_US", "zh_TW")) {
+            YamlConfiguration catalog = locale(locale);
+            for (String key : Set.of("error.snapshot-restoring", "error.snapshot-unavailable")) {
+                assertTranslation(catalog, key);
+            }
+        }
+    }
+
     private void assertTranslation(YamlConfiguration catalog, String key) {
         assertTrue(catalog.isString(key), () -> "Missing translation key: " + key);
         assertTrue(!catalog.getString(key, "").isBlank(), () -> "Blank translation key: " + key);

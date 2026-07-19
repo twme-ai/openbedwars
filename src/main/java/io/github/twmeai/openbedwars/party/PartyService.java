@@ -386,6 +386,8 @@ public final class PartyService implements Listener {
             case ALREADY_JOINED -> plugin.messages().send(player, "error.already-in-arena");
             case FULL -> plugin.messages().send(player, "error.arena-full");
             case RUNNING -> plugin.messages().send(player, "error.arena-running");
+            case RESTORING -> plugin.messages().send(player, "error.snapshot-restoring");
+            case SNAPSHOT_UNAVAILABLE -> plugin.messages().send(player, "error.snapshot-unavailable");
         }
     }
 

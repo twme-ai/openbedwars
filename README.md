@@ -45,7 +45,7 @@ Implemented in the current development build:
 - Main- and offhand-safe Fireballs, Dream Defenders, and Pop-up Towers with deterministic main-hand priority, plus team-owned Bed Bugs, collision-safe Bridge Eggs, Magic Milk, and Sponges
 - Per-player MiniMessage locales, complete English and Traditional Chinese dynamic names, and live-localized scoreboards
 - Asynchronous SQLite statistics for games, wins/losses, kills, final kills/deaths, beds, XP, and Bed Wars levels
-- Automatic same-game reconnect with a configurable grace period, preserved respawn countdowns, and delayed snapshot restoration
+- Automatic same-game reconnect with a configurable grace period, preserved respawn countdowns, and durable cross-restart snapshot restoration
 - Final-elimination spectator flight with an active-player teleporter, enemy-hidden observers, and a return-to-lobby item
 - Hypixel-style parties with expiring invites, disconnect-resilient leadership, moderation, chat, and atomic arena joining
 - Asynchronous top-10 leaderboards for wins, kills, final kills, beds, and level
