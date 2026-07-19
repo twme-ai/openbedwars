@@ -111,6 +111,8 @@ Buying a stone, iron, or diamond sword replaces the default wooden sword instead
 
 Swords, shears, pickaxes, and axes cannot be moved out of the player inventory during a match. OpenBedWars blocks shift transfers, cursor placement, number-key and offhand swaps, drags into a top inventory, and bundle insertion; cursor and slot drop actions remain blocked as well. Players can still rearrange this equipment inside their own inventory and retrieve a matching item that already existed in a container.
 
+Arena join closes the current inventory view and clears the cursor before preparing the waiting inventory. OpenBedWars repeats that boundary when the match begins, so an external item already on the cursor, or one acquired during the countdown, cannot enter the match. The pre-game snapshot stores the cursor stack and selected hotbar slot separately from inventory storage, then restores both on leave or reset.
+
 ## Crafting
 
 Minecraft crafting is disabled for every player who has joined an arena, including the waiting, countdown, running, and ending phases. OpenBedWars clears the personal 2x2 crafting result before it is shown and cancels the final craft event as a second line of defense, so recipe-book, normal clicks, and shift-click extraction cannot turn match resources into unpriced items. Players outside an arena retain normal Minecraft crafting.
@@ -202,7 +204,7 @@ Invisibility and its armor override end when the player receives uncancelled dam
 
 After final elimination, a player enters a flying Adventure observer mode at the arena's spectator position. Active players cannot see or collide with observers, while observers retain visibility of every active player. Observer damage, block and entity interaction, item pickup and drop, and inventory movement are cancelled.
 
-The compass in hotbar slot 1 opens a localized player-head menu containing only online, living players who are neither eliminated nor respawning. Each entry shows current health and food; selecting it teleports the observer to that player and revalidates the target before moving. The red bed in hotbar slot 9 leaves the arena and restores the player's pre-game location, inventory, game mode, flight, collision, effects, and scoreboard. Both items are also restored when an eliminated player reconnects during the game.
+The compass in hotbar slot 1 opens a localized player-head menu containing only online, living players who are neither eliminated nor respawning. Each entry shows current health and food; selecting it teleports the observer to that player and revalidates the target before moving. The red bed in hotbar slot 9 leaves the arena and restores the player's pre-game location, inventory, cursor stack, selected hotbar slot, game mode, flight, collision, effects, and scoreboard. Both observer items are also restored when an eliminated player reconnects during the game.
 
 ## Validate and enable
 

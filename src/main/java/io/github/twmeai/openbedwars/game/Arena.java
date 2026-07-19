@@ -1575,12 +1575,15 @@ public final class Arena implements ArenaSelectionPolicy.Candidate {
     }
 
     private void prepareWaitingPlayer(Player player) {
+        player.closeInventory();
+        player.setItemOnCursor(new ItemStack(Material.AIR));
         player.getInventory().clear();
         player.getEnderChest().clear();
         player.setGameMode(GameMode.ADVENTURE);
         player.setAllowFlight(false);
         player.setHealth(player.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue());
         player.setFoodLevel(20);
+        player.updateInventory();
         player.teleportAsync(definition.lobby().toLocation(world));
     }
 

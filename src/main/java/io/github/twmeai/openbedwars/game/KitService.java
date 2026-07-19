@@ -23,6 +23,8 @@ public final class KitService {
     );
 
     public void prepareForGame(Player player, PlayerState state, TeamState team) {
+        player.closeInventory();
+        player.setItemOnCursor(new ItemStack(Material.AIR));
         player.getInventory().clear();
         for (PotionEffect effect : player.getActivePotionEffects()) {
             player.removePotionEffect(effect.getType());
@@ -37,6 +39,7 @@ public final class KitService {
         player.setGameMode(org.bukkit.GameMode.SURVIVAL);
         player.setAllowFlight(false);
         givePersistentEquipment(player, state, team);
+        player.updateInventory();
     }
 
     public void givePersistentEquipment(Player player, PlayerState state, TeamState team) {

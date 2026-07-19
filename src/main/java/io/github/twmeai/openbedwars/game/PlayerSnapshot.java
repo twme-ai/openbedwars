@@ -2,6 +2,7 @@ package io.github.twmeai.openbedwars.game;
 
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -16,6 +17,8 @@ public final class PlayerSnapshot {
     private final ItemStack[] storage;
     private final ItemStack[] armor;
     private final ItemStack offHand;
+    private final ItemStack cursor;
+    private final int heldItemSlot;
     private final ItemStack[] enderChest;
     private final int level;
     private final float experience;
@@ -34,6 +37,8 @@ public final class PlayerSnapshot {
         storage = cloneItems(player.getInventory().getStorageContents());
         armor = cloneItems(player.getInventory().getArmorContents());
         offHand = cloneItem(player.getInventory().getItemInOffHand());
+        cursor = cloneItem(player.getItemOnCursor());
+        heldItemSlot = player.getInventory().getHeldItemSlot();
         enderChest = cloneItems(player.getEnderChest().getContents());
         level = player.getLevel();
         experience = player.getExp();
@@ -52,10 +57,14 @@ public final class PlayerSnapshot {
     }
 
     public void restore(Player player) {
+        player.closeInventory();
+        player.setItemOnCursor(new ItemStack(Material.AIR));
         player.getInventory().clear();
         player.getInventory().setStorageContents(cloneItems(storage));
         player.getInventory().setArmorContents(cloneItems(armor));
         player.getInventory().setItemInOffHand(cloneItem(offHand));
+        player.getInventory().setHeldItemSlot(heldItemSlot);
+        player.setItemOnCursor(cloneItem(cursor));
         player.getEnderChest().clear();
         player.getEnderChest().setContents(cloneItems(enderChest));
         player.setLevel(level);
@@ -76,6 +85,7 @@ public final class PlayerSnapshot {
         player.setHealth(Math.max(0.1, Math.min(health, maxHealth)));
         player.teleportAsync(location);
         player.setScoreboard(scoreboard);
+        player.updateInventory();
     }
 
     private static ItemStack[] cloneItems(ItemStack[] items) {
